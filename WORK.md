@@ -1,13 +1,21 @@
 # Work
 
-Eyoel:
+## Eyoel:
 
-Login
+16, Login Fucntions, 17, 18
 
-Saron:
+## Saron:
 
-Dahir:
+4, 11
 
-Nik:
+## Dahir:
 
-Pruthak:
+7, 8, 9, 10, 12
+
+## Nik:
+
+12, 13, 14
+
+## Pruthak:
+
+1, 2, 3, 5, 6
