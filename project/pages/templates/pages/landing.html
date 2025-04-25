@@ -1,0 +1,29 @@
+{% extends 'pages/base.html' %}
+{% block content %}
+  <div class="landing-container">
+    <header class="landing-header">
+      <h1>Welcome to Travel Connect</h1>
+      <p>Your personalized travel assistant</p>
+      <a href="{% url 'signup' %}" class="cta-btn">Join Now</a>
+    </header>
+
+    <section class="features">
+        <h2>What We Offer</h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h3>Destination Search</h3>
+            <p>Find and explore new destinations with detailed travel info.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Real-Time Navigation</h3>
+            <p>Get directions and live updates on the go!</p>
+          </div>
+          <div class="feature-card">
+            <h3>Personalized Itinerary</h3>
+            <p>Build your custom travel itinerary with ease.</p>
+          </div>
+        </div>
+      </section>
+                      
+  </div>
+{% endblock %}
