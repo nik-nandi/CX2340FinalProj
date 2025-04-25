@@ -15,4 +15,6 @@ urlpatterns = [
     
     # Map UI route
     path('map/', views.map_ui, name='map_ui'),
+
+    path('itineraries/', views.itineraries_view, name='itineraries'),
 ]
