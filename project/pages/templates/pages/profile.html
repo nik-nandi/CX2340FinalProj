@@ -1,0 +1,30 @@
+{% extends 'pages/base.html' %}
+{% block content %}
+<div class="profile-container">
+    <h2>Welcome to Your Profile</h2>
+    
+    <div class="profile-card">
+        <h3>Account Information</h3>
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>Account Type:</strong> {{ user.get_role_display }}</p>
+        <p><strong>Member Since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+    </div>
+    
+    {% if user.is_traveler %}
+    <div class="profile-section">
+        <h3>My Travel Plans</h3>
+        <p>You haven't created any travel plans yet.</p>
+        <a href="#" class="btn">Plan New Trip</a>
+    </div>
+    {% endif %}
+
+    {% if user.is_guide %}
+    <div class="profile-section">
+        <h3>My Tour Offerings</h3>
+        <p>You haven't created any tours yet.</p>
+        <a href="#" class="btn">Create Tour</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

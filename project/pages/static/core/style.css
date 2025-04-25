@@ -108,6 +108,43 @@ body {
     font-size: 1rem;
   }  
 
+  /* Profile Page Styles */
+  .profile-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  
+  .profile-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 30px;
+  }
+  
+  .profile-section {
+    background-color: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    margin-bottom: 30px;
+  }
+  
+  .btn {
+    display: inline-block;
+    background-color: #1e3d58;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    margin-top: 15px;
+    font-weight: 600;
+  }
+  
+  .btn:hover {
+    background-color: #152d42;
+    text-decoration: none;
+  }
   
   /* Footer */
   footer {
@@ -117,4 +154,3 @@ body {
     color: #888;
     font-size: 0.9rem;
   }
-  

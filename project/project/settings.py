@@ -124,7 +124,6 @@ STATICFILES_DIRS = [
 ]
 
 
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -132,3 +131,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # This setting tells Django to use the custom User model defined in pages/models.py
+
+# Authentication settings
+LOGIN_REDIRECT_URL = 'profile'  # Redirects to the profile page after login
+LOGIN_URL = 'login'  # Redirects to login page when login_required decorator is used

@@ -3,6 +3,7 @@ from django.contrib.auth import login
 from .models import User
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
+from django.contrib.auth.decorators import login_required
 
 def landing_page(request):
     return render(request, 'pages/landing.html')
@@ -25,3 +26,8 @@ def signup_view(request):
     else:
         form = SignUpForm()
     return render(request, 'pages/registration/signup.html', {'form': form})
+
+@login_required
+def profile_view(request):
+    """Display the user profile page."""
+    return render(request, 'pages/profile.html')
