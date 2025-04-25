@@ -333,3 +333,73 @@ body {
     padding-left: 20px;
     margin: 5px 0;
   }
+
+  /* Authentication Pages (Login/Signup) */
+  .auth-container {
+    max-width: 450px;
+    margin: 60px auto;
+    padding: 0 20px;
+  }
+  
+  .auth-card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+  
+  .auth-subtitle {
+    color: #666;
+    margin-bottom: 25px;
+  }
+  
+  .auth-form .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .auth-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .auth-form input[type="text"],
+  .auth-form input[type="password"],
+  .auth-form input[type="email"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+  }
+  
+  .auth-form input:focus {
+    outline: none;
+    border-color: #1e3d58;
+    box-shadow: 0 0 0 2px rgba(30,61,88,0.2);
+  }
+  
+  .auth-error {
+    background-color: #fff5f5;
+    color: #e53e3e;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border-left: 3px solid #e53e3e;
+  }
+  
+  .auth-footer {
+    margin-top: 25px;
+    text-align: center;
+    color: #666;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+  
+  .btn-full {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
