@@ -12,4 +12,7 @@ urlpatterns = [
     
     # Profile route
     path('accounts/profile/', views.profile_view, name='profile'),
+    
+    # Map UI route
+    path('map/', views.map_ui, name='map_ui'),
 ]

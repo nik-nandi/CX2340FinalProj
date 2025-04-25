@@ -154,3 +154,85 @@ body {
     color: #888;
     font-size: 0.9rem;
   }
+
+  /* Map UI Styles */
+  .map-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  
+  .map-interface {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  #map {
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .map-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .trip-area-section, 
+  .create-trip-area,
+  .create-location {
+    background-color: white;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .trip-areas-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .trip-areas-list li {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .locations-list {
+    margin-top: 15px;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+  }
+  
+  .locations-list ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .locations-list li {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+  }

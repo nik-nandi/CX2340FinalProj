@@ -17,3 +17,27 @@ class User(AbstractUser):
 
     def is_admin(self):
         return self.role == 'admin'
+
+class TripArea(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trip_areas')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    radius = models.FloatField()  # in kilometers
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
+
+class TripLocation(models.Model):
+    trip_area = models.ForeignKey(TripArea, on_delete=models.CASCADE, related_name='locations')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    address = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.trip_area.name}"
