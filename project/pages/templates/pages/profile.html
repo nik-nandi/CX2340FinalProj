@@ -14,7 +14,34 @@
     {% if user.is_traveler %}
     <div class="profile-section">
         <h3>My Travel Plans</h3>
-        <p>You haven't created any travel plans yet.</p>
+        {% if trip_areas %}
+            <div class="trip-areas">
+                {% for trip in trip_areas %}
+                <div class="trip-card">
+                    <h4>{{ trip.name }}</h4>
+                    {% if trip.description %}
+                    <p>{{ trip.description }}</p>
+                    {% endif %}
+                    <p><strong>Location:</strong> {{ trip.latitude }}, {{ trip.longitude }}</p>
+                    <p><strong>Radius:</strong> {{ trip.radius }} km</p>
+                    <p><strong>Created:</strong> {{ trip.created_at|date:"F j, Y" }}</p>
+                    
+                    {% if trip.locations.all %}
+                    <div class="trip-locations">
+                        <h5>Saved Locations ({{ trip.locations.count }})</h5>
+                        <ul>
+                            {% for location in trip.locations.all %}
+                            <li>{{ location.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>You haven't created any travel plans yet.</p>
+        {% endif %}
         <a href="{% url 'map_ui' %}" class="btn">Plan New Trip</a>
     </div>
     {% endif %}

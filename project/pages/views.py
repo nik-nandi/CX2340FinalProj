@@ -19,9 +19,9 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
+            user.set_password(form.cleaned_data['password'])  # Hash the password
             user.save()
-            login(request, user)
+            login(request, user)  # Automatically log them in
             return redirect('landing')
     else:
         form = SignUpForm()
@@ -30,14 +30,16 @@ def signup_view(request):
 @login_required
 def profile_view(request):
     """Display the user profile page."""
-    return render(request, 'pages/profile.html')
+    trip_areas = TripArea.objects.filter(user=request.user)
+    return render(request, 'pages/profile.html', {'trip_areas': trip_areas})
 
 @login_required
 def map_ui(request):
-    api_key = 'AIzaSyClWa93Hx08igxCiwgj3oD64ia9DlYAfLM'
+    api_key = 'AIzaSyClWa93Hx08igxCiwgj3oD64ia9DlYAfLM'  # Replace with your actual API key if needed
     trip_areas = TripArea.objects.filter(user=request.user)
     
     if request.method == 'POST':
+        # Handle form submission to create new trip area
         if 'create_trip_area' in request.POST:
             name = request.POST.get('name')
             description = request.POST.get('description')
@@ -52,26 +54,6 @@ def map_ui(request):
                 latitude=latitude,
                 longitude=longitude,
                 radius=radius
-            )
-            return redirect('map_ui')
-            
-        elif 'create_trip_location' in request.POST:
-            trip_area_id = request.POST.get('trip_area_id')
-            trip_area = TripArea.objects.get(id=trip_area_id, user=request.user)
-            
-            name = request.POST.get('location_name')
-            description = request.POST.get('location_description')
-            latitude = float(request.POST.get('location_latitude'))
-            longitude = float(request.POST.get('location_longitude'))
-            address = request.POST.get('location_address')
-            
-            TripLocation.objects.create(
-                trip_area=trip_area,
-                name=name,
-                description=description,
-                latitude=latitude,
-                longitude=longitude,
-                address=address
             )
             return redirect('map_ui')
     

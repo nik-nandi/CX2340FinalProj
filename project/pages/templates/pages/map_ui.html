@@ -17,7 +17,6 @@
                                 <h4>{{ area.name }}</h4>
                                 <p>{{ area.description }}</p>
                                 <button class="btn view-area" data-lat="{{ area.latitude }}" data-lng="{{ area.longitude }}" data-radius="{{ area.radius }}">View on Map</button>
-                                <button class="btn add-location" data-area-id="{{ area.id }}">Add Location</button>
                                 
                                 {% if area.locations.all %}
                                     <div class="locations-list">
@@ -64,32 +63,6 @@
                     <button type="submit" class="btn" disabled id="submit-trip-area">Create Trip Area</button>
                 </form>
             </div>
-            
-            <div class="create-location" style="display: none;">
-                <h3>Add Location to <span id="selected-area-name"></span></h3>
-                <form id="location-form" method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="create_trip_location" value="1">
-                    <input type="hidden" id="trip_area_id" name="trip_area_id">
-                    <div class="form-group">
-                        <label for="location_name">Location Name:</label>
-                        <input type="text" id="location_name" name="location_name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="location_description">Description:</label>
-                        <textarea id="location_description" name="location_description"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="location_address">Address:</label>
-                        <input type="text" id="location_address" name="location_address" readonly>
-                    </div>
-                    <input type="hidden" id="location_latitude" name="location_latitude">
-                    <input type="hidden" id="location_longitude" name="location_longitude">
-                    <p>Click on the map within the selected trip area to add a specific location.</p>
-                    <button type="submit" class="btn" disabled id="submit-location">Add Location</button>
-                    <button type="button" class="btn cancel-location">Cancel</button>
-                </form>
-            </div>
         </div>
     </div>
 </div>
@@ -99,7 +72,6 @@ let map;
 let markers = [];
 let currentCircle = null;
 let geocoder;
-let selectedAreaId = null;
 
 function initMap() {
     // Initialize map centered on a default location (e.g., Atlanta, GA)
@@ -132,17 +104,10 @@ function initMap() {
     
     geocoder = new google.maps.Geocoder();
     
-    // Add click event for setting trip area or location
+    // Add click event for setting trip area
     map.addListener("click", (e) => {
         const clickedPosition = e.latLng;
-        
-        if (selectedAreaId) {
-            // We're adding a location to an existing trip area
-            handleLocationSelection(clickedPosition);
-        } else {
-            // We're creating a new trip area
-            handleTripAreaSelection(clickedPosition);
-        }
+        handleTripAreaSelection(clickedPosition);
     });
     
     // Initialize view-area buttons
@@ -175,19 +140,6 @@ function initMap() {
         });
     });
     
-    // Initialize add-location buttons
-    document.querySelectorAll('.add-location').forEach(btn => {
-        btn.addEventListener('click', function() {
-            selectedAreaId = this.dataset.areaId;
-            const areaName = this.closest('li').querySelector('h4').textContent;
-            
-            document.getElementById('trip_area_id').value = selectedAreaId;
-            document.getElementById('selected-area-name').textContent = areaName;
-            document.querySelector('.create-location').style.display = 'block';
-            document.querySelector('.create-trip-area').style.display = 'none';
-        });
-    });
-    
     // Initialize view-location buttons
     document.querySelectorAll('.view-location').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -198,14 +150,6 @@ function initMap() {
             map.setCenter(center);
             map.setZoom(16);
         });
-    });
-    
-    // Cancel location selection
-    document.querySelector('.cancel-location').addEventListener('click', function() {
-        selectedAreaId = null;
-        document.querySelector('.create-location').style.display = 'none';
-        document.querySelector('.create-trip-area').style.display = 'block';
-        clearMarkers();
     });
 }
 
@@ -239,32 +183,6 @@ function handleTripAreaSelection(position) {
         map,
         center: position,
         radius: radius * 1000  // Convert km to meters
-    });
-}
-
-function handleLocationSelection(position) {
-    clearMarkers();
-    
-    // Add marker at clicked position
-    const marker = new google.maps.Marker({
-        position: position,
-        map: map,
-        animation: google.maps.Animation.DROP
-    });
-    markers.push(marker);
-    
-    // Update form fields
-    document.getElementById('location_latitude').value = position.lat();
-    document.getElementById('location_longitude').value = position.lng();
-    
-    // Get address using geocoder
-    geocoder.geocode({ location: position }, (results, status) => {
-        if (status === "OK" && results[0]) {
-            document.getElementById('location_address').value = results[0].formatted_address;
-            document.getElementById('submit-location').disabled = false;
-        } else {
-            document.getElementById('location_address').value = "Address not found";
-        }
     });
 }
 
