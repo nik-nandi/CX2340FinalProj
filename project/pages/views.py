@@ -61,3 +61,7 @@ def map_ui(request):
         'api_key': api_key,
         'trip_areas': trip_areas
     })
+
+@login_required
+def itineraries_view(request):
+    return render(request, 'pages/itineraries.html')
