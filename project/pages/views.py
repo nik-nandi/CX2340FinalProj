@@ -19,9 +19,9 @@ def signup_view(request):
         form = SignUpForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])  # Hash the password
+            user.set_password(form.cleaned_data['password'])
             user.save()
-            login(request, user)  # Automatically log them in
+            login(request, user)
             return redirect('landing')
     else:
         form = SignUpForm()
@@ -34,11 +34,10 @@ def profile_view(request):
 
 @login_required
 def map_ui(request):
-    api_key = 'AIzaSyClWa93Hx08igxCiwgj3oD64ia9DlYAfLM'  # Replace with your actual API key if needed
+    api_key = 'AIzaSyClWa93Hx08igxCiwgj3oD64ia9DlYAfLM'
     trip_areas = TripArea.objects.filter(user=request.user)
     
     if request.method == 'POST':
-        # Handle form submission to create new trip area
         if 'create_trip_area' in request.POST:
             name = request.POST.get('name')
             description = request.POST.get('description')
@@ -56,7 +55,6 @@ def map_ui(request):
             )
             return redirect('map_ui')
             
-        # Handle form submission to create new trip location
         elif 'create_trip_location' in request.POST:
             trip_area_id = request.POST.get('trip_area_id')
             trip_area = TripArea.objects.get(id=trip_area_id, user=request.user)

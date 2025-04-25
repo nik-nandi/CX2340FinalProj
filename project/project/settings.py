@@ -101,8 +101,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
@@ -113,25 +111,13 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'pages/static'),
 ]
 
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-
-# This setting tells Django to use the custom User model defined in pages/models.py
-
-# Authentication settings
-LOGIN_REDIRECT_URL = 'profile'  # Redirects to the profile page after login
-LOGIN_URL = 'login'  # Redirects to login page when login_required decorator is used
+LOGIN_REDIRECT_URL = 'profile'
+LOGIN_URL = 'login'
