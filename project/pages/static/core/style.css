@@ -24,11 +24,19 @@ body {
     padding: 20px 40px;
     background-color: #ffffff;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    align-items: center;
   }
   
   nav a {
     font-weight: 600;
     color: #1e3d58;
+  }
+
+  /* Navigation Logout Button */
+  .nav-btn {
+    padding: 8px 16px;
+    margin: 0;
+    font-size: 0.9rem;
   }
   
   /* Main Landing Layout */
