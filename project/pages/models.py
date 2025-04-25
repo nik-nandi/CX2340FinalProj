@@ -41,3 +41,22 @@ class TripLocation(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.trip_area.name}"
+
+class ItineraryItem(models.Model):
+    trip_area = models.ForeignKey(TripArea, on_delete=models.CASCADE, related_name='itinerary_items')
+    place_id = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    address = models.CharField(max_length=255)
+    photo_reference = models.CharField(max_length=500, null=True, blank=True)
+    types = models.CharField(max_length=255, blank=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+    
+    def __str__(self):
+        return f"{self.name} - {self.trip_area.name}"

@@ -16,5 +16,10 @@ urlpatterns = [
     # Map UI route
     path('map/', views.map_ui, name='map_ui'),
 
+    # Itineraries routes
     path('itineraries/', views.itineraries_view, name='itineraries'),
+    path('api/attractions/search/', views.search_attractions, name='search_attractions'),
+    path('api/itinerary/add/', views.add_to_itinerary, name='add_to_itinerary'),
+    path('api/itinerary/remove/<int:item_id>/', views.remove_from_itinerary, name='remove_from_itinerary'),
+    path('api/itinerary/reorder/', views.reorder_itinerary, name='reorder_itinerary'),
 ]

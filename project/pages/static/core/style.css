@@ -403,3 +403,212 @@ body {
     padding: 12px;
     font-size: 16px;
   }
+
+  /* Itinerary Page Styles */
+  .itinerary-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  
+  .itinerary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+  
+  .trip-area-selector {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .trip-area-selector label {
+    margin-bottom: 0;
+    font-weight: 600;
+  }
+  
+  .trip-area-selector select {
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    background-color: white;
+    font-size: 1rem;
+    height: 42px;
+    box-sizing: border-box;
+  }
+  
+  .itinerary-content {
+    display: flex;
+    gap: 30px;
+  }
+  
+  .itinerary-sidebar {
+    flex: 0 0 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .itinerary-map-container {
+    flex: 1;
+    min-height: 600px;
+  }
+  
+  .itinerary-section, .search-section {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  
+  .itinerary-items, .search-results .results-container {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .itinerary-item, .search-result {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.3s;
+  }
+  
+  .itinerary-item:last-child, .search-result:last-child {
+    border-bottom: none;
+  }
+  
+  .itinerary-item:hover, .search-result:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .itinerary-item h4, .search-result h4 {
+    margin: 0 0 5px 0;
+    color: #1e3d58;
+  }
+  
+  .itinerary-item p, .search-result p {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: #666;
+  }
+  
+  .item-actions, .search-result-actions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  .btn-small {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    background-color: #1e3d58;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .btn-small:hover {
+    background-color: #ff6600;
+  }
+  
+  .empty-message, .loading-message, .error-message {
+    padding: 15px;
+    text-align: center;
+    color: #666;
+  }
+  
+  .loading-message {
+    color: #1e3d58;
+  }
+  
+  .error-message {
+    color: #e53e3e;
+  }
+  
+  .attraction-filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .filter-btn {
+    padding: 8px 15px;
+    background-color: #f1f1f1;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: 0.9rem;
+  }
+  
+  .filter-btn:hover {
+    background-color: #ddd;
+  }
+  
+  .filter-btn.active {
+    background-color: #1e3d58;
+    color: white;
+  }
+  
+  .no-trip-area {
+    text-align: center;
+    padding: 50px 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  
+  .info-window {
+    padding: 5px 0;
+  }
+  
+  .info-window h4 {
+    margin: 0 0 5px 0;
+    color: #1e3d58;
+  }
+  
+  .info-window p {
+    margin: 0 0 10px 0;
+  }
+  
+  .info-window button {
+    margin-top: 5px;
+  }
+  
+  @media (max-width: 768px) {
+    .itinerary-content {
+      flex-direction: column;
+    }
+    
+    .itinerary-sidebar {
+      flex: 0 0 auto;
+      width: 100%;
+    }
+    
+    .itinerary-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+    }
+    
+    .trip-area-selector {
+      flex-wrap: wrap;
+    }
+  }
+
+  .map-controls .trip-areas-list li .trip-area-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* Reset margin-top for buttons in the trip area selector */
+  .trip-area-selector .btn {
+    margin-top: 0;
+  }

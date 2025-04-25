@@ -19,7 +19,10 @@
                             <li>
                                 <h4>{{ area.name }}</h4>
                                 <p>{{ area.description }}</p>
-                                <button class="btn view-area" data-lat="{{ area.latitude }}" data-lng="{{ area.longitude }}" data-radius="{{ area.radius }}">View on Map</button>
+                                <div class="trip-area-actions">
+                                    <button class="btn view-area" data-lat="{{ area.latitude }}" data-lng="{{ area.longitude }}" data-radius="{{ area.radius }}">View on Map</button>
+                                    <a href="{% url 'itineraries' %}?trip_area={{ area.id }}" class="btn">View Itinerary</a>
+                                </div>
                                 
                                 {% if area.locations.all %}
                                     <div class="locations-list">
