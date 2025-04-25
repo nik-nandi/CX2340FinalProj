@@ -2,7 +2,10 @@
 
 {% block content %}
 <div class="map-container">
-    <h2>Plan Your Trip</h2>
+    <div class="map-header">
+        <h2>Plan Your Trip</h2>
+        <a href="{% url 'profile' %}" class="btn">← Back to Profile</a>
+    </div>
     
     <div class="map-interface">
         <div id="map" style="height: 500px; width: 100%;"></div>
