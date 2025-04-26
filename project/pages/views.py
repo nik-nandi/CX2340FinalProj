@@ -14,6 +14,8 @@ from django.db.models import Count, Avg
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION # Import ADDITION
 
+def handle_error(e):
+    return JsonResponse({'error': str(e)}, status=500)
 def landing_page(request):
     return render(request, 'pages/landing.html')
 
@@ -255,7 +257,7 @@ def add_to_itinerary(request):
             return JsonResponse({'status': 'success', 'item_id': item.id})
             
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return handle_error(e)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
@@ -289,6 +291,6 @@ def reorder_itinerary(request):
             return JsonResponse({'status': 'success'})
         
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return handle_error(e)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
