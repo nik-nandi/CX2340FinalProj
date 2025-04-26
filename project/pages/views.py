@@ -8,6 +8,8 @@ from django.http import JsonResponse
 import requests
 import json
 from django.db.models import Count, Avg
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.admin.models import LogEntry, ADDITION # Import ADDITION
 
 def landing_page(request):
     return render(request, 'pages/landing.html')
@@ -67,6 +69,13 @@ def profile_view(request):
         recent_users = User.objects.order_by('-date_joined')[:10]
         
         # Get popular destinations (places added to multiple itineraries)
+        # Get recent log entries
+        recent_logs = LogEntry.objects.select_related('user', 'content_type').order_by('-action_time')[:15]
+
+        # Get all users for management section
+        all_users = User.objects.order_by('username')
+
+        # Get popular destinations (places added to multiple itineraries)
         popular_destinations = (
             ItineraryItem.objects
             .values('place_id', 'name', 'address')
@@ -87,6 +96,8 @@ def profile_view(request):
             'recent_trip_areas': recent_trip_areas,
             'recent_users': recent_users,
             'popular_destinations': popular_destinations,
+            'recent_logs': recent_logs,  # Add logs to context
+            'all_users': all_users,      # Add all users to context
         })
     
     return render(request, 'pages/profile.html', context)
@@ -113,6 +124,17 @@ def map_ui(request):
                 longitude=longitude,
                 radius=radius
             )
+            
+            # Log the creation action
+            LogEntry.objects.log_action(
+                user_id=request.user.pk,
+                content_type_id=ContentType.objects.get_for_model(trip_area).pk,
+                object_id=trip_area.pk,
+                object_repr=str(trip_area),
+                action_flag=ADDITION, # Use ADDITION for creation
+                change_message="User created a new trip area."
+            )
+            
             return redirect('map_ui')
     
     return render(request, 'pages/map_ui.html', {
@@ -215,6 +237,16 @@ def add_to_itinerary(request):
                 longitude=place_data.get('geometry', {}).get('location', {}).get('lng'),
                 photo_reference=place_data.get('photos', [{}])[0].get('photo_reference', '') if place_data.get('photos') else '',
                 order=ItineraryItem.objects.filter(trip_area=trip_area).count() + 1
+            )
+            
+            # Log the addition action
+            LogEntry.objects.log_action(
+                user_id=request.user.pk,
+                content_type_id=ContentType.objects.get_for_model(item).pk,
+                object_id=item.pk,
+                object_repr=str(item),
+                action_flag=ADDITION, # Use ADDITION for creation/addition
+                change_message=f"User added '{item.name}' to itinerary '{trip_area.name}'."
             )
             
             return JsonResponse({'status': 'success', 'item_id': item.id})
