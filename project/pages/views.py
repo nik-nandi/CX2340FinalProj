@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
+
+from project.settings import GOOGLE_API_KEY
 from .models import User, TripArea, TripLocation, ItineraryItem
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
@@ -7,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 import requests
 import json
+from django.conf import settings
 from django.db.models import Count, Avg
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION # Import ADDITION
@@ -104,7 +107,7 @@ def profile_view(request):
 
 @login_required
 def map_ui(request):
-    api_key = 'AIzaSyCIGrBb--vJ9luPpJjnwUDfp92ER04umMI'
+    api_key = GOOGLE_API_KEY
     trip_areas = TripArea.objects.filter(user=request.user)
     
     if request.method == 'POST':
@@ -144,7 +147,7 @@ def map_ui(request):
 
 @login_required
 def itineraries_view(request):
-    api_key = 'AIzaSyCIGrBb--vJ9luPpJjnwUDfp92ER04umMI'
+    api_key = GOOGLE_API_KEY
     
     # Get the selected trip area or the first one
     trip_area_id = request.GET.get('trip_area')
@@ -182,7 +185,7 @@ def search_attractions(request):
     except TripArea.DoesNotExist:
         return JsonResponse({'error': 'Trip area not found'}, status=404)
     
-    api_key = 'AIzaSyCIGrBb--vJ9luPpJjnwUDfp92ER04umMI'
+    api_key = GOOGLE_API_KEY
     
     # Call Google Places API
     url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json"
