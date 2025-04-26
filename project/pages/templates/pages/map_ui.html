@@ -8,6 +8,18 @@
     </div>
     
     <div class="map-interface">
+        <!-- Add Destination Search Bar -->
+        <div class="search-bar-container">
+            <div class="search-bar">
+                <label for="destination-search">Destination Search</label>
+                <div class="search-input-wrapper">
+                    <input type="text" id="destination-search" placeholder="Search for a location">
+                    <button id="search-button"><i class="search-icon">🔍</i></button>
+                </div>
+                <div id="search-status" class="search-status"></div>
+            </div>
+        </div>
+        
         <div id="map" style="height: 500px; width: 100%;"></div>
         
         <div class="map-controls">
@@ -78,6 +90,7 @@ let map;
 let markers = [];
 let currentCircle = null;
 let geocoder;
+let searchMarker = null;
 
 function initMap() {
     const defaultLocation = { lat: 33.7490, lng: -84.3880 };
@@ -156,6 +169,98 @@ function initMap() {
             map.setZoom(16);
         });
     });
+
+    // Set up destination search functionality
+    setupDestinationSearch();
+}
+
+function setupDestinationSearch() {
+    const searchInput = document.getElementById('destination-search');
+    const searchButton = document.getElementById('search-button');
+    const searchStatus = document.getElementById('search-status');
+    
+    // Add autocomplete to search input
+    const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+        fields: ['geometry', 'name', 'formatted_address'],
+        types: ['geocode', 'establishment']
+    });
+    
+    // Handle search button click
+    searchButton.addEventListener('click', function() {
+        performSearch();
+    });
+    
+    // Handle enter key press in search input
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch();
+        }
+    });
+    
+    // Handle place selection from autocomplete
+    autocomplete.addListener('place_changed', function() {
+        const place = autocomplete.getPlace();
+        if (place.geometry && place.geometry.location) {
+            if (searchMarker) {
+                searchMarker.setMap(null);
+                searchMarker = null;
+            }
+            
+            map.setCenter(place.geometry.location);
+            map.setZoom(14);
+            
+            searchStatus.innerHTML = `Found: ${place.formatted_address || place.name}`;
+            searchStatus.className = 'search-status success';
+            
+             setTimeout(() => {
+                searchStatus.innerHTML = '';
+                searchStatus.className = 'search-status';
+            }, 5000);
+        }
+    });
+    
+    function performSearch() {
+        const searchText = searchInput.value;
+        if (!searchText.trim()) {
+            searchStatus.innerHTML = 'Please enter a location to search';
+            searchStatus.className = 'search-status error';
+            return;
+        }
+        
+        searchStatus.innerHTML = 'Searching...';
+        searchStatus.className = 'search-status searching';
+        
+        geocoder.geocode({ address: searchText }, function(results, status) {
+            if (status === google.maps.GeocoderStatus.OK && results[0]) {
+                // Clear previous search marker if exists
+                if (searchMarker) {
+                    searchMarker.setMap(null);
+                    searchMarker = null;
+                }
+                
+                const location = results[0].geometry.location;
+                
+                // Center map on the searched location
+                map.setCenter(location);
+                map.setZoom(14);
+                
+                // Show success message
+                searchStatus.innerHTML = `Found: ${results[0].formatted_address}`;
+                searchStatus.className = 'search-status success';
+                
+                // Clear status after 5 seconds
+                setTimeout(() => {
+                    searchStatus.innerHTML = '';
+                    searchStatus.className = 'search-status';
+                }, 5000);
+            } else {
+                // Show error message
+                searchStatus.innerHTML = 'Location not found. Please try a different search.';
+                searchStatus.className = 'search-status error';
+            }
+        });
+    }
 }
 
 function handleTripAreaSelection(position) {
@@ -207,6 +312,6 @@ document.getElementById('radius').addEventListener('change', function() {
 });
 </script>
 <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=places&callback=initMap">
 </script>
 {% endblock %}

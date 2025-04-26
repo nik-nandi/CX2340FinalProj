@@ -788,3 +788,98 @@ body {
       padding: 8px 10px;
     }
   }
+
+  /* Destination Search Styles */
+  .search-bar-container {
+    margin-bottom: 20px;
+  }
+
+  .search-bar {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .search-bar label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #1e3d58;
+    font-size: 1.1rem;
+  }
+
+  .search-input-wrapper {
+    display: flex;
+    position: relative;
+  }
+
+  #destination-search {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  #destination-search:focus {
+    outline: none;
+    border-color: #1e3d58;
+    box-shadow: 0 0 0 3px rgba(30,61,88,0.1);
+  }
+
+  #search-button {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: #1e3d58;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: transform 0.2s ease;
+  }
+
+  #search-button:hover {
+    transform: translateY(-50%) scale(1.1);
+  }
+
+  .search-icon {
+    font-style: normal;
+  }
+
+  .search-status {
+    margin-top: 10px;
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+
+  .search-status.success {
+    padding: 8px 12px;
+    height: auto;
+    background-color: #e6fff1;
+    border-left: 3px solid #00cc66;
+    color: #007d3d;
+  }
+
+  .search-status.error {
+    padding: 8px 12px;
+    height: auto;
+    background-color: #fff5f5;
+    border-left: 3px solid #e53e3e;
+    color: #c53030;
+  }
+
+  .search-status.searching {
+    padding: 8px 12px;
+    height: auto;
+    background-color: #f0f7ff;
+    border-left: 3px solid #3182ce;
+    color: #2b6cb0;
+  }
