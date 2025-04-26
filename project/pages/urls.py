@@ -22,4 +22,6 @@ urlpatterns = [
     path('api/itinerary/add/', views.add_to_itinerary, name='add_to_itinerary'),
     path('api/itinerary/remove/<int:item_id>/', views.remove_from_itinerary, name='remove_from_itinerary'),
     path('api/itinerary/reorder/', views.reorder_itinerary, name='reorder_itinerary'),
+    path('send-inquiry/', views.send_inquiry, name='send_inquiry'),
+    path('view-inquiries/', views.view_inquiries, name='view_inquiries'),
 ]

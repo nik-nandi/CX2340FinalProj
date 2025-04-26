@@ -1,5 +1,12 @@
 {% extends 'pages/base.html' %}
 {% block content %}
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-success">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
   <div class="landing-container">
     <header class="landing-header">
       <h1>Welcome to Travel Connect</h1>

@@ -1,0 +1,11 @@
+{% extends 'pages/base.html' %}
+{% block content %}
+  <h2>Received Inquiries</h2>
+  <ul>
+    {% for inquiry in inquiries %}
+      <li><strong>{{ inquiry.traveler.username }}</strong>: {{ inquiry.message }} ({{ inquiry.timestamp }})</li>
+    {% empty %}
+      <li>No inquiries yet.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

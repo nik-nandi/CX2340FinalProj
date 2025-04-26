@@ -13,6 +13,11 @@ from django.conf import settings
 from django.db.models import Count, Avg
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.admin.models import LogEntry, ADDITION # Import ADDITION
+from django.shortcuts import render, redirect
+from .forms import InquiryForm
+from .models import Inquiry
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
 def landing_page(request):
     return render(request, 'pages/landing.html')
@@ -292,3 +297,22 @@ def reorder_itinerary(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+@login_required
+def send_inquiry(request):
+    if request.method == 'POST':
+        form = InquiryForm(request.POST)
+        if form.is_valid():
+            inquiry = form.save(commit=False)
+            inquiry.traveler = request.user
+            inquiry.save()
+            messages.success(request, "Your inquiry has been sent successfully!")
+            return redirect('landing')
+    else:
+        form = InquiryForm()
+    return render(request, 'pages/send_inquiry.html', {'form': form})
+
+@login_required
+def view_inquiries(request):
+    inquiries = Inquiry.objects.filter(guide=request.user)
+    return render(request, 'pages/view_inquiries.html', {'inquiries': inquiries})
