@@ -106,6 +106,62 @@
         </div>
     </div>
 
+    <div class="admin-section">
+        <h3>User Activity Logs</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Object</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr>
+                    <td>{{ log.user.username }}</td>
+                    <td>{{ log.get_action_flag_display }}</td>
+                    <td>{{ log.object_repr }} ({{ log.content_type }})</td>
+                    <td>{{ log.action_time|date:"M d, Y, g:i a" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">No recent activity logs.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-section">
+        <h3>Manage Users</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in all_users %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.get_role_display }}</td>
+                    <td>{{ u.date_joined|date:"M d, Y" }}</td>
+                    <td>
+                        <a href="{% url 'admin:pages_user_change' u.id %}" class="btn btn-small">Edit</a>
+                        {# Add delete button/link if needed, linking to admin delete view #}
+                        {# <a href="{% url 'admin:pages_user_delete' u.id %}" class="btn btn-small btn-danger">Delete</a> #}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     <div class="admin-actions">
         <a href="{% url 'admin:index' %}" class="btn admin-btn">Django Admin</a>
     </div>
