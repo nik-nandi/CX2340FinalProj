@@ -61,7 +61,7 @@
                     </div>
                     <div class="form-group">
                         <label for="radius">Radius (km):</label>
-                        <input type="number" id="radius" name="radius" value="10" min="1" max="100">
+                        <input type="number" id="radius" name="radius" value="5" min="1" max="100">
                     </div>
                     <input type="hidden" id="latitude" name="latitude">
                     <input type="hidden" id="longitude" name="longitude">
@@ -80,7 +80,6 @@ let currentCircle = null;
 let geocoder;
 
 function initMap() {
-    // Initialize map centered on a default location (e.g., Atlanta, GA)
     const defaultLocation = { lat: 33.7490, lng: -84.3880 };
     map = new google.maps.Map(document.getElementById("map"), {
         zoom: 10,

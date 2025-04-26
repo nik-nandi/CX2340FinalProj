@@ -219,15 +219,23 @@ function searchAttractions(type) {
 }
 
 function addMarkerToMap(options) {
+    // Define blue icon with HTTPS URL for security
+    const blueIcon = {
+        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        scaledSize: new google.maps.Size(32, 32)
+    };
+    
+    const redIcon = {
+        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        scaledSize: new google.maps.Size(32, 32)
+    };
+
     const marker = new google.maps.Marker({
         position: options.position,
         map: map,
         title: options.title,
         animation: options.isItineraryItem ? google.maps.Animation.DROP : null,
-        icon: options.isItineraryItem ? 
-            {
-                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" 
-            } : undefined
+        icon: options.isItineraryItem ? blueIcon : redIcon
     });
     
     marker.isItineraryItem = options.isItineraryItem;
@@ -317,11 +325,11 @@ function setupItineraryItemHandlers() {
         });
     });
     
-    // Remove buttons
+    // Remove buttons - use event delegation instead of direct binding
     document.querySelectorAll('.itinerary-item .remove-item').forEach(btn => {
         btn.addEventListener('click', function() {
             const itemId = this.dataset.id;
-            removeFromItinerary(itemId);
+            removeFromItinerary(itemId, this.closest('.itinerary-item'));
         });
     });
 }
@@ -382,6 +390,8 @@ function addToItinerary(place) {
             </div>
         `;
         
+        // Add to DOM with initial opacity 0
+        newItem.style.opacity = "0";
         document.getElementById('itinerary-list').appendChild(newItem);
         
         // Add marker for the new itinerary item
@@ -407,23 +417,32 @@ function addToItinerary(place) {
         }
         
         // Set up event handlers for the new item
-        setupItineraryItemHandlers();
+        setupItemHandlers(newItem);
         
-        // Highlight the new item briefly
-        newItem.style.backgroundColor = '#e6f7ff';
+        // Fade in the new item
         setTimeout(() => {
-            newItem.style.transition = 'background-color 1s';
-            newItem.style.backgroundColor = '';
-        }, 100);
+            newItem.style.transition = "opacity 0.5s ease, background-color 1s";
+            newItem.style.opacity = "1";
+            newItem.style.backgroundColor = '#e6f7ff';
+            
+            // Reset background color after highlight
+            setTimeout(() => {
+                newItem.style.backgroundColor = '';
+            }, 1000);
+        }, 10);
     })
     .catch(error => {
         alert('Error adding to itinerary: ' + error.message);
     });
 }
 
-function removeFromItinerary(itemId) {
-    if (!confirm('Are you sure you want to remove this item from your itinerary?')) {
-        return;
+function removeFromItinerary(itemId, itemElement) {
+    // Remove confirmation dialog to prevent UI disruption
+    
+    // Apply a fade-out effect before removal
+    if (itemElement) {
+        itemElement.style.transition = "opacity 0.3s ease";
+        itemElement.style.opacity = "0";
     }
     
     fetch(`/api/itinerary/remove/${itemId}/`, {
@@ -436,39 +455,80 @@ function removeFromItinerary(itemId) {
     .then(data => {
         if (data.error) {
             alert(`Error: ${data.error}`);
+            // Restore opacity if error occurs
+            if (itemElement) {
+                itemElement.style.opacity = "1";
+            }
             return;
         }
         
-        // Remove the item from the UI
-        const itemElement = document.getElementById(`itinerary-item-${itemId}`);
-        if (itemElement) itemElement.remove();
-        
-        // Remove the marker from the map
-        const marker = markers.find(m => m.id === parseInt(itemId));
-        if (marker) {
-            marker.setMap(null);
-            markers = markers.filter(m => m !== marker);
-        }
-        
-        // Check if itinerary is now empty
-        const itineraryList = document.getElementById('itinerary-list');
-        if (itineraryList && itineraryList.children.length === 0) {
-            itineraryList.remove();
+        // Remove the item from the UI after animation completes
+        setTimeout(() => {
+            const itemElement = document.getElementById(`itinerary-item-${itemId}`);
+            if (itemElement) itemElement.remove();
             
-            const itinerarySection = document.querySelector('.itinerary-section');
-            const emptyMessage = document.createElement('p');
-            emptyMessage.className = 'empty-message';
-            emptyMessage.textContent = 'No attractions added to your itinerary yet. Search below to find attractions.';
-            itinerarySection.appendChild(emptyMessage);
-        }
+            // Remove the marker from the map
+            const marker = markers.find(m => m.id === parseInt(itemId));
+            if (marker) {
+                marker.setMap(null);
+                markers = markers.filter(m => m !== marker);
+            }
+            
+            // Check if itinerary is now empty
+            const itineraryList = document.getElementById('itinerary-list');
+            if (itineraryList && itineraryList.children.length === 0) {
+                itineraryList.remove();
+                
+                const itinerarySection = document.querySelector('.itinerary-section');
+                const emptyMessage = document.createElement('p');
+                emptyMessage.className = 'empty-message';
+                emptyMessage.textContent = 'No attractions added to your itinerary yet. Search below to find attractions.';
+                itinerarySection.appendChild(emptyMessage);
+            }
+        }, 300); // Match this with the transition duration
     })
     .catch(error => {
-        alert('Error removing from itinerary: ' + error.message);
+        console.error('Error removing from itinerary:', error);
+        // Restore opacity if error occurs
+        if (itemElement) {
+            itemElement.style.opacity = "1";
+        }
     });
 }
 
 function getCsrfToken() {
     return document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+}
+
+// New helper function to set up event handlers for a single item
+function setupItemHandlers(itemElement) {
+    const viewButton = itemElement.querySelector('.view-on-map');
+    if (viewButton) {
+        viewButton.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            
+            map.setCenter({lat, lng});
+            map.setZoom(16);
+            
+            // Find and activate the corresponding marker
+            const marker = markers.find(m => 
+                m.id === parseInt(this.closest('.itinerary-item').dataset.id)
+            );
+            
+            if (marker) {
+                google.maps.event.trigger(marker, 'click');
+            }
+        });
+    }
+    
+    const removeButton = itemElement.querySelector('.remove-item');
+    if (removeButton) {
+        removeButton.addEventListener('click', function() {
+            const itemId = this.dataset.id;
+            removeFromItinerary(itemId, this.closest('.itinerary-item'));
+        });
+    }
 }
 
 // Add hidden CSRF token for AJAX requests

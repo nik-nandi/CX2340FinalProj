@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 import requests
 import json
+from django.db.models import Count, Avg
 
 def landing_page(request):
     return render(request, 'pages/landing.html')
@@ -23,6 +24,12 @@ def signup_view(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])  # Hash the password
+            
+            # If the user is registering as an admin, make them a superuser
+            if form.cleaned_data['role'] == 'admin':
+                user.is_staff = True
+                user.is_superuser = True
+            
             user.save()
             login(request, user)  # Automatically log them in
             return redirect('landing')
@@ -34,7 +41,55 @@ def signup_view(request):
 def profile_view(request):
     """Display the user profile page."""
     trip_areas = TripArea.objects.filter(user=request.user)
-    return render(request, 'pages/profile.html', {'trip_areas': trip_areas})
+    
+    # Add admin dashboard data if user is an admin
+    context = {'trip_areas': trip_areas}
+    
+    if request.user.is_admin():
+        # Get statistics for admin dashboard
+        user_count = User.objects.count()
+        traveler_count = User.objects.filter(role='traveler').count()
+        guide_count = User.objects.filter(role='guide').count()
+        admin_count = User.objects.filter(role='admin').count()
+        
+        trip_area_count = TripArea.objects.count()
+        avg_radius = TripArea.objects.aggregate(Avg('radius'))['radius__avg'] or 0
+        
+        itinerary_count = ItineraryItem.objects.count()
+        # Calculate average items per trip area
+        trip_areas_with_items = TripArea.objects.annotate(item_count=Count('itinerary_items')).filter(item_count__gt=0)
+        avg_items_per_trip = trip_areas_with_items.aggregate(Avg('item_count'))['item_count__avg'] or 0
+        
+        # Get recent trip areas
+        recent_trip_areas = TripArea.objects.select_related('user').prefetch_related('itinerary_items').order_by('-created_at')[:10]
+        
+        # Get recent users
+        recent_users = User.objects.order_by('-date_joined')[:10]
+        
+        # Get popular destinations (places added to multiple itineraries)
+        popular_destinations = (
+            ItineraryItem.objects
+            .values('place_id', 'name', 'address')
+            .annotate(count=Count('place_id'))
+            .order_by('-count')[:6]
+        )
+        
+        # Add all data to context
+        context.update({
+            'user_count': user_count,
+            'traveler_count': traveler_count,
+            'guide_count': guide_count,
+            'admin_count': admin_count,
+            'trip_area_count': trip_area_count,
+            'avg_radius': avg_radius,
+            'itinerary_count': itinerary_count,
+            'avg_items_per_trip': avg_items_per_trip,
+            'recent_trip_areas': recent_trip_areas,
+            'recent_users': recent_users,
+            'popular_destinations': popular_destinations,
+        })
+    
+    return render(request, 'pages/profile.html', context)
 
 @login_required
 def map_ui(request):

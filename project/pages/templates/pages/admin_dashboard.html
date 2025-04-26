@@ -1,0 +1,112 @@
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h2>Admin Dashboard</h2>
+        <p>Welcome back, {{ user.username }}. Here's an overview of your system.</p>
+    </div>
+
+    <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+            <h3>Users</h3>
+            <div class="stat-number">{{ user_count }}</div>
+            <div class="stat-details">
+                <div>Travelers: {{ traveler_count }}</div>
+                <div>Tour Guides: {{ guide_count }}</div>
+                <div>Admins: {{ admin_count }}</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <h3>Trip Areas</h3>
+            <div class="stat-number">{{ trip_area_count }}</div>
+            <div class="stat-details">
+                <div>Average Radius: {{ avg_radius|floatformat:1 }} km</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <h3>Itinerary Items</h3>
+            <div class="stat-number">{{ itinerary_count }}</div>
+            <div class="stat-details">
+                <div>Average per Trip: {{ avg_items_per_trip|floatformat:1 }}</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <h3>System</h3>
+            <div class="stat-details">
+                <div>Last Login: {{ user.last_login|date:"F j, Y, g:i a" }}</div>
+                <div>Server Time: {% now "F j, Y, g:i a" %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h3>Recent Trip Areas</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>User</th>
+                    <th>Location</th>
+                    <th>Radius</th>
+                    <th>Created</th>
+                    <th>Items</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for area in recent_trip_areas %}
+                <tr>
+                    <td>{{ area.name }}</td>
+                    <td>{{ area.user.username }}</td>
+                    <td>{{ area.latitude|floatformat:4 }}, {{ area.longitude|floatformat:4 }}</td>
+                    <td>{{ area.radius }} km</td>
+                    <td>{{ area.created_at|date:"M d, Y" }}</td>
+                    <td>{{ area.itinerary_items.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-section">
+        <h3>Recent Users</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Last Login</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in recent_users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.get_role_display }}</td>
+                    <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                    <td>{{ user.last_login|date:"M d, Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-section">
+        <h3>Popular Destinations</h3>
+        <div class="popular-destinations">
+            {% for item in popular_destinations %}
+            <div class="popular-destination-card">
+                <h4>{{ item.name }}</h4>
+                <p>{{ item.address }}</p>
+                <div class="destination-stats">
+                    <span>Added {{ item.count }} times</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="admin-actions">
+        <a href="{% url 'admin:index' %}" class="btn admin-btn">Django Admin</a>
+    </div>
+</div>
