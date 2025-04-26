@@ -12,9 +12,17 @@
             <div class="profile-dropdown">
                 <button class="profile-dropbtn">Profile</button>
                 <div class="profile-dropdown-content">
-                    <a href="{% url 'profile' %}">My Profile</a>
-                    <a href="{% url 'map_ui' %}">My Map</a>
-                    <a href="{% url 'itineraries' %}">My Itineraries</a>
+                    {% if user.is_admin %}
+                        <a href="{% url 'profile' %}">My Dashboard</a>
+                    {% elif user.is_guide %}
+                        <a href="{% url 'profile' %}">My Profile</a>
+                        <a href="{% url 'map_ui' %}">My Map</a>
+                        <a href="{% url 'itineraries' %}">My Itineraries</a>
+                    {% else %}
+                        <a href="{% url 'profile' %}">My Profile</a>
+                        <a href="{% url 'map_ui' %}">My Map</a>
+                        <a href="{% url 'itineraries' %}">My Itineraries</a>
+                    {% endif %}
                 </div>
             </div>
             <form method="post" action="{% url 'logout' %}" style="display:inline;">
