@@ -24,4 +24,6 @@ urlpatterns = [
     path('api/itinerary/reorder/', views.reorder_itinerary, name='reorder_itinerary'),
     path('events/', views.local_events_list, name='local_events_list'),
     path('events/create/', views.create_local_event, name='create_local_event'),
+    path('events/<int:event_id>/update/', views.update_local_event, name='update_local_event'),
+
 ]

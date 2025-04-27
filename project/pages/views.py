@@ -320,3 +320,23 @@ def create_local_event(request):
     else:
         form = LocalEventForm()
     return render(request, 'pages/create_local_event.html', {'form': form})
+
+@login_required
+def update_local_event(request, event_id):
+    event = get_object_or_404(LocalEvent, id=event_id)
+    if not request.user.is_guide():
+        return HttpResponseForbidden("You are not allowed to update events.")
+
+    if request.method == 'POST':
+        if 'save_changes' in request.POST:
+            form = LocalEventForm(request.POST, instance=event)
+            if form.is_valid():
+                form.save()
+                return redirect('local_events_list')
+        elif 'delete_event' in request.POST:
+            event.delete()
+            return redirect('local_events_list')
+    else:
+        form = LocalEventForm(instance=event)
+
+    return render(request, 'pages/update_local_event.html', {'form': form, 'event': event})
