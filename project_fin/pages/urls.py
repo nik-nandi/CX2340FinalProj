@@ -52,6 +52,12 @@ urlpatterns = [
     path('inquiries/detail/<int:inquiry_id>/', views.inquiry_detail_view, name='inquiry_detail'),
     path('api/inquiries/status/<int:inquiry_id>/', views.update_inquiry_status, name='update_inquiry_status'),
 
+    # Bookmarks routes
+    path('bookmarks/', views.bookmarks_view, name='bookmarks'),
+    path('api/bookmarks/add/', views.add_bookmark, name='add_bookmark'),
+    path('api/bookmarks/remove/<int:bookmark_id>/', views.remove_bookmark, name='remove_bookmark'),
+    path('api/bookmarks/update-notes/', views.update_bookmark_notes, name='update_bookmark_notes'), # New URL for updating notes
+
     # Alerts routes
     path('trip/<int:trip_area_id>/alerts/', views.trip_alerts_view, name='trip_alerts'),
     path('guide/alerts/', views.guide_alerts_view, name='guide_alerts'),

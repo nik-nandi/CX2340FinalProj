@@ -1,0 +1,577 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="bookmarks-container">
+    <div class="bookmarks-header">
+        <h2>My Bookmarked Locations</h2>
+        <div class="bookmarks-actions">
+            <a href="{% url 'profile' %}" class="btn">← Back to Profile</a>
+        </div>
+    </div>
+    
+    <div class="bookmarks-content">
+        <div class="bookmarks-sidebar">
+            <div class="search-filter">
+                <input type="text" id="bookmark-search" placeholder="Search bookmarks...">
+                <!-- Removed filter select dropdown -->
+            </div>
+            
+            <div id="bookmarks-list" class="bookmarks-list">
+                {% if bookmarks %}
+                    {% for bookmark in bookmarks %}
+                    <div class="bookmark-item" data-id="{{ bookmark.id }}" data-type="{{ bookmark.type }}" data-lat="{{ bookmark.latitude }}" data-lng="{{ bookmark.longitude }}">
+                        <div class="bookmark-content">
+                            <h4>{{ bookmark.name }}</h4>
+                            <p>{{ bookmark.address }}</p>
+                            {% if bookmark.notes %}
+                            <div class="bookmark-notes">
+                                <p><em>{{ bookmark.notes }}</em></p>
+                            </div>
+                            {% endif %}
+                            <div class="bookmark-meta">
+                                <span class="bookmark-type">{{ bookmark.get_type_display }}</span>
+                                <span class="bookmark-date">Added: {{ bookmark.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="bookmark-actions">
+                            <button class="btn-small view-on-map" data-lat="{{ bookmark.latitude }}" data-lng="{{ bookmark.longitude }}">View on Map</button>
+                            <button class="btn-small edit-notes" data-id="{{ bookmark.id }}">Edit Notes</button>
+                            <button class="btn-small remove-bookmark" data-id="{{ bookmark.id }}">Remove</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="no-bookmarks">You haven't bookmarked any locations yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="bookmarks-map-container">
+            <div id="bookmarks-map" style="height: 600px; width: 100%;"></div>
+        </div>
+    </div>
+    
+    <!-- Modal for editing notes -->
+    <div id="notes-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Edit Notes</h3>
+            <form id="notes-form">
+                <input type="hidden" id="bookmark-id">
+                <div class="form-group">
+                    <textarea id="bookmark-notes" rows="4" placeholder="Add notes about this location..."></textarea>
+                </div>
+                <button type="submit" class="btn">Save Notes</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let map;
+let markers = [];
+let infoWindow;
+
+function initMap() {
+    // Default center if no bookmarks
+    let mapCenter = { lat: 33.7490, lng: -84.3880 }; // Atlanta
+    let zoomLevel = 10;
+    
+    // If we have bookmarks, center on the first one
+    {% if bookmarks %}
+        {% with first_bookmark=bookmarks.0 %}
+            mapCenter = { lat: {{ first_bookmark.latitude }}, lng: {{ first_bookmark.longitude }} };
+            zoomLevel = 12;
+        {% endwith %}
+    {% endif %}
+    
+    // Initialize map
+    map = new google.maps.Map(document.getElementById("bookmarks-map"), {
+        zoom: zoomLevel,
+        center: mapCenter
+    });
+    
+    infoWindow = new google.maps.InfoWindow();
+    
+    // Add markers for all bookmarks
+    {% for bookmark in bookmarks %}
+    addMarker({
+        id: {{ bookmark.id }},
+        position: { lat: {{ bookmark.latitude }}, lng: {{ bookmark.longitude }} },
+        title: "{{ bookmark.name }}",
+        address: "{{ bookmark.address }}",
+        notes: `{{ bookmark.notes|default:"" }}`,
+        type: "{{ bookmark.type }}"
+    });
+    {% endfor %}
+}
+
+function addMarker(bookmark) {
+    // Choose icon based on type
+    const iconUrl = getIconForType(bookmark.type);
+    
+    const marker = new google.maps.Marker({
+        position: bookmark.position,
+        map: map,
+        title: bookmark.title,
+        animation: google.maps.Animation.DROP,
+        icon: {
+            url: iconUrl,
+            scaledSize: new google.maps.Size(32, 32)
+        }
+    });
+    
+    marker.bookmarkId = bookmark.id;
+    
+    marker.addListener("click", () => {
+        const content = `
+            <div class="info-window">
+                <h4>${bookmark.title}</h4>
+                <p>${bookmark.address}</p>
+                ${bookmark.notes ? `<p class="notes"><em>${bookmark.notes}</em></p>` : ''}
+                <button id="edit-from-map-${bookmark.id}" class="btn-small">Edit Notes</button>
+                <button id="remove-from-map-${bookmark.id}" class="btn-small">Remove Bookmark</button>
+            </div>
+        `;
+        
+        infoWindow.setContent(content);
+        infoWindow.open(map, marker);
+        
+        // Add event listeners after info window is opened
+        setTimeout(() => {
+            document.getElementById(`edit-from-map-${bookmark.id}`).addEventListener('click', () => {
+                editBookmarkNotes(bookmark.id, bookmark.notes || '');
+            });
+            
+            document.getElementById(`remove-from-map-${bookmark.id}`).addEventListener('click', () => {
+                removeBookmark(bookmark.id);
+            });
+        }, 100);
+    });
+    
+    markers.push(marker);
+    return marker;
+}
+
+function getIconForType(type) {
+    switch(type) {
+        case 'attraction':
+            return "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+        case 'restaurant':
+            return "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+        case 'lodging':
+            return "https://maps.google.com/mapfiles/ms/icons/purple-dot.png";
+        default:
+            return "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
+    }
+}
+
+function removeBookmark(bookmarkId) {
+    fetch(`/api/bookmarks/remove/${bookmarkId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Remove the marker from the map
+            const markerIndex = markers.findIndex(m => m.bookmarkId === parseInt(bookmarkId));
+            if (markerIndex > -1) {
+                markers[markerIndex].setMap(null);
+                markers.splice(markerIndex, 1);
+            }
+            
+            // Remove the bookmark item from the sidebar
+            const bookmarkElement = document.querySelector(`.bookmark-item[data-id="${bookmarkId}"]`);
+            if (bookmarkElement) {
+                bookmarkElement.style.height = bookmarkElement.offsetHeight + 'px';
+                bookmarkElement.style.opacity = '0';
+                bookmarkElement.style.marginTop = '-' + bookmarkElement.offsetHeight + 'px';
+                
+                setTimeout(() => {
+                    bookmarkElement.remove();
+                    
+                    // If no more bookmarks, show the no-bookmarks message
+                    if (document.querySelectorAll('.bookmark-item').length === 0) {
+                        const noBookmarks = document.createElement('p');
+                        noBookmarks.className = 'no-bookmarks';
+                        noBookmarks.textContent = 'You haven\'t bookmarked any locations yet.';
+                        document.getElementById('bookmarks-list').appendChild(noBookmarks);
+                    }
+                }, 300);
+            }
+            
+            // Close the info window if it's open
+            infoWindow.close();
+        } else {
+            alert('Error removing bookmark: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+function editBookmarkNotes(bookmarkId, currentNotes) {
+    // Set up modal with current notes
+    document.getElementById('bookmark-id').value = bookmarkId;
+    document.getElementById('bookmark-notes').value = currentNotes;
+    
+    // Show modal
+    document.getElementById('notes-modal').style.display = 'block';
+}
+
+function getCsrfToken() {
+    return document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+}
+
+// Handle the search and filtering
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('bookmark-search');
+    // Removed filterSelect variable
+    const bookmarksList = document.querySelectorAll('.bookmark-item');
+    
+    function filterBookmarks() {
+        const searchTerm = searchInput.value.toLowerCase();
+        // Removed filterType variable
+        
+        bookmarksList.forEach(bookmark => {
+            const name = bookmark.querySelector('h4').textContent.toLowerCase();
+            const address = bookmark.querySelector('p').textContent.toLowerCase();
+            // Removed type variable
+            
+            // Check if bookmark matches search term
+            const matchesSearch = name.includes(searchTerm) || address.includes(searchTerm);
+            // Removed matchesFilter variable and logic
+            
+            // Show or hide based on search term only
+            if (matchesSearch) {
+                bookmark.style.display = '';
+            } else {
+                bookmark.style.display = 'none';
+            }
+        });
+    }
+    
+    // Add event listener for search input only
+    searchInput.addEventListener('input', filterBookmarks);
+    // Removed event listener for filterSelect
+    
+    // Set up modal events
+    const modal = document.getElementById('notes-modal');
+    const closeModal = document.querySelector('.close-modal');
+    const notesForm = document.getElementById('notes-form');
+    
+    closeModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    notesForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const bookmarkId = document.getElementById('bookmark-id').value;
+        const notes = document.getElementById('bookmark-notes').value;
+        
+        // Send updated notes to server
+        fetch('/api/bookmarks/update-notes/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                bookmark_id: bookmarkId,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Update notes in the UI
+                const bookmark = document.querySelector(`.bookmark-item[data-id="${bookmarkId}"]`);
+                let notesElement = bookmark.querySelector('.bookmark-notes');
+                
+                if (!notesElement && notes) {
+                    // Create notes element if it doesn't exist
+                    notesElement = document.createElement('div');
+                    notesElement.className = 'bookmark-notes';
+                    notesElement.innerHTML = `<p><em>${notes}</em></p>`;
+                    bookmark.querySelector('.bookmark-content').insertBefore(
+                        notesElement, 
+                        bookmark.querySelector('.bookmark-meta')
+                    );
+                } else if (notesElement && notes) {
+                    // Update existing notes
+                    notesElement.innerHTML = `<p><em>${notes}</em></p>`;
+                } else if (notesElement && !notes) {
+                    // Remove empty notes
+                    notesElement.remove();
+                }
+                
+                modal.style.display = 'none';
+                
+                // Also update marker's info window if it's open
+                if (infoWindow.getMap()) {
+                    // Find the marker
+                    const marker = markers.find(m => m.bookmarkId === parseInt(bookmarkId));
+                    if (marker) {
+                        // Re-click the marker to update info window
+                        google.maps.event.trigger(marker, 'click');
+                    }
+                }
+            } else {
+                alert('Error updating notes: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
+    });
+    
+    // Set up event delegation for bookmark item buttons
+    document.getElementById('bookmarks-list').addEventListener('click', (e) => {
+        const target = e.target;
+        
+        // View on Map button
+        if (target.classList.contains('view-on-map')) {
+            const bookmark = target.closest('.bookmark-item');
+            const lat = parseFloat(bookmark.dataset.lat);
+            const lng = parseFloat(bookmark.dataset.lng);
+            
+            map.setCenter({lat, lng});
+            map.setZoom(16);
+            
+            // Find and click the corresponding marker
+            const marker = markers.find(m => 
+                m.bookmarkId === parseInt(bookmark.dataset.id)
+            );
+            
+            if (marker) {
+                google.maps.event.trigger(marker, 'click');
+            }
+        }
+        
+        // Edit Notes button
+        if (target.classList.contains('edit-notes')) {
+            const bookmarkId = target.dataset.id;
+            const bookmark = document.querySelector(`.bookmark-item[data-id="${bookmarkId}"]`);
+            const notesElement = bookmark.querySelector('.bookmark-notes');
+            const notes = notesElement ? notesElement.querySelector('p').textContent : '';
+            
+            editBookmarkNotes(bookmarkId, notes);
+        }
+        
+        // Remove Bookmark button
+        if (target.classList.contains('remove-bookmark')) {
+            const bookmarkId = target.dataset.id;
+            removeBookmark(bookmarkId);
+        }
+    });
+    
+    // Add CSRF token to document
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    document.body.appendChild(csrfInput);
+});
+</script>
+
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap">
+</script>
+
+<style>
+.bookmarks-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.bookmarks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.bookmarks-content {
+    display: flex;
+    gap: 30px;
+}
+
+.bookmarks-sidebar {
+    flex: 0 0 350px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.bookmarks-map-container {
+    flex: 1;
+    min-height: 600px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.search-filter {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#bookmark-search {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+/* Removed #bookmark-filter style */
+
+.bookmarks-list {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.bookmark-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    transition: opacity 0.3s ease, margin-top 0.3s ease, height 0.3s ease;
+}
+
+.bookmark-item:last-child {
+    border-bottom: none;
+}
+
+.bookmark-content h4 {
+    margin: 0 0 5px 0;
+    color: #1e3d58;
+}
+
+.bookmark-content p {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.bookmark-notes {
+    background-color: #f9f9f9;
+    padding: 8px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.bookmark-notes p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.bookmark-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #777;
+    margin-bottom: 10px;
+}
+
+.bookmark-type {
+    background-color: #e6f7ff;
+    padding: 3px 6px;
+    border-radius: 10px;
+    color: #1e3d58;
+}
+
+.bookmark-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.no-bookmarks {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    width: 80%;
+    max-width: 500px;
+}
+
+.close-modal {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: #777;
+}
+
+.info-window {
+    padding: 5px;
+}
+
+.info-window h4 {
+    margin: 0 0 5px 0;
+}
+
+.info-window p {
+    margin: 0 0 10px 0;
+}
+
+.info-window .notes {
+    font-size: 0.9rem;
+    font-style: italic;
+    background-color: #f9f9f9;
+    padding: 5px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.info-window button {
+    margin-right: 5px;
+}
+
+@media (max-width: 768px) {
+    .bookmarks-content {
+        flex-direction: column;
+    }
+    
+    .bookmarks-sidebar {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

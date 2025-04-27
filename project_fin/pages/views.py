@@ -1,11 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import User, TripArea, TripLocation, ItineraryItem, Tour, TourInquiry, TripAlert, GuideReview
+from .models import User, TripArea, TripLocation, ItineraryItem, Tour, TourInquiry, TripAlert, GuideReview, Bookmark
 from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
-from django.http import JsonResponse, StreamingHttpResponse
+from django.http import JsonResponse, StreamingHttpResponse, HttpResponseForbidden, HttpResponseBadRequest
 import requests
 import json
 from django.db.models import Count, Avg, Q
@@ -17,6 +17,8 @@ import io
 import re
 from django.contrib.auth.forms import PasswordChangeForm
 from django.urls import reverse
+from django.views.decorators.http import require_POST
+from django.db import transaction, IntegrityError
 
 def landing_page(request):
     return render(request, 'pages/landing.html')
@@ -119,6 +121,15 @@ def profile_view(request):
             'all_users': all_users, # Changed context variable name
             'popular_destinations': popular_destinations,
         })
+
+    recent_bookmarks = None
+    if request.user.is_traveler:
+        # Fetch recent bookmarks for travelers
+        recent_bookmarks = Bookmark.objects.filter(user=request.user).order_by('-created_at')[:5] # Get latest 5
+
+    context.update({
+        'recent_bookmarks': recent_bookmarks, # Add recent bookmarks to context
+    })
 
     return render(request, 'pages/profile.html', context)
 
@@ -1101,3 +1112,105 @@ def delete_alert_view(request, alert_id):
         return redirect('guide_alerts')
     
     return render(request, 'pages/delete_alert.html', {'alert': alert})
+
+# --- Bookmark Views ---
+
+@login_required
+def bookmarks_view(request):
+    """Displays the user's bookmarked locations."""
+    bookmarks = Bookmark.objects.filter(user=request.user).order_by('-created_at')
+    context = {
+        'bookmarks': bookmarks,
+        'api_key': settings.GOOGLE_MAPS_API_KEY,
+    }
+    return render(request, 'pages/bookmarks.html', context)
+
+@login_required
+@require_POST
+def add_bookmark(request):
+    """Adds a location to the user's bookmarks via API."""
+    try:
+        data = json.loads(request.body)
+        place = data.get('place')
+        bookmark_type = data.get('type', 'other') # Get type, default to 'other'
+
+        if not place or 'geometry' not in place or 'location' not in place['geometry']:
+            return JsonResponse({'error': 'Invalid place data provided.'}, status=400)
+
+        lat = place['geometry']['location']['lat']
+        lng = place['geometry']['location']['lng']
+        name = place.get('name', 'Unnamed Location')
+        address = place.get('vicinity') or place.get('formatted_address') # Use vicinity or formatted_address
+        place_id = place.get('place_id')
+
+        # Use get_or_create to avoid duplicates based on user and location
+        # Using lat/lng might be better if place_id isn't always present or unique enough across searches
+        bookmark, created = Bookmark.objects.get_or_create(
+            user=request.user,
+            latitude=lat,
+            longitude=lng,
+            defaults={
+                'name': name,
+                'address': address,
+                'place_id': place_id,
+                'type': bookmark_type,
+            }
+        )
+
+        if created:
+            return JsonResponse({'status': 'success', 'bookmark_id': bookmark.id})
+        else:
+            # If it already exists, maybe update its details? Or just confirm it exists.
+            # For now, let's just return success even if it existed.
+            return JsonResponse({'status': 'success', 'bookmark_id': bookmark.id, 'message': 'Bookmark already exists.'})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data.'}, status=400)
+    except IntegrityError:
+         # This might happen if unique_together constraint fails concurrently, though get_or_create handles most cases
+         return JsonResponse({'error': 'Bookmark likely already exists (concurrent request).'}, status=409)
+    except Exception as e:
+        # Log the exception e
+        print(f"Error adding bookmark: {e}")
+        return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
+
+@login_required
+@require_POST
+def remove_bookmark(request, bookmark_id):
+    """Removes a bookmark via API."""
+    try:
+        bookmark = get_object_or_404(Bookmark, id=bookmark_id, user=request.user)
+        bookmark.delete()
+        return JsonResponse({'status': 'success'})
+    except Bookmark.DoesNotExist:
+         return JsonResponse({'error': 'Bookmark not found or you do not have permission.'}, status=404)
+    except Exception as e:
+        # Log the exception e
+        print(f"Error removing bookmark: {e}")
+        return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
+
+@login_required
+@require_POST
+def update_bookmark_notes(request):
+    """Updates the notes for a specific bookmark via API."""
+    try:
+        data = json.loads(request.body)
+        bookmark_id = data.get('bookmark_id')
+        notes = data.get('notes', '') # Default to empty string if notes are cleared
+
+        if bookmark_id is None:
+            return JsonResponse({'error': 'Bookmark ID is required.'}, status=400)
+
+        bookmark = get_object_or_404(Bookmark, id=bookmark_id, user=request.user)
+        bookmark.notes = notes
+        bookmark.save()
+
+        return JsonResponse({'status': 'success', 'notes': bookmark.notes})
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data.'}, status=400)
+    except Bookmark.DoesNotExist:
+         return JsonResponse({'error': 'Bookmark not found or you do not have permission.'}, status=404)
+    except Exception as e:
+        # Log the exception e
+        print(f"Error updating bookmark notes: {e}")
+        return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)

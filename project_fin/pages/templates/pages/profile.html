@@ -81,10 +81,34 @@
             <div class="profile-actions">
                 <a href="{% url 'map_ui' %}" class="btn">View and Plan Trips</a>
                 <a href="{% url 'browse_guides' %}" class="btn">Browse Tour Guides</a>
+                <a href="{% url 'bookmarks' %}" class="btn">My Bookmarks</a>
                 <a href="{% url 'my_inquiries' %}" class="btn">My Guide Inquiries</a>
                 <a href="{% url 'my_reviews' %}" class="btn">My Guide Reviews</a>
             </div>
         </div>
+
+        <!-- New section for recent bookmarks -->
+        {% if recent_bookmarks %}
+        <div class="profile-section">
+            <h3>Recent Bookmarks</h3>
+            <div class="bookmarks-grid">
+                {% for bookmark in recent_bookmarks %}
+                <div class="bookmark-card">
+                    <h4>{{ bookmark.name }}</h4>
+                    <p>{{ bookmark.address }}</p>
+                    <div class="bookmark-meta">
+                        <span class="bookmark-type">{{ bookmark.get_type_display }}</span>
+                        <span class="bookmark-date">Added: {{ bookmark.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <div class="bookmark-actions">
+                        <a href="{% url 'bookmarks' %}" class="view-bookmark">View All Bookmarks</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
         {% endif %}
 
         {% if user.is_guide %}
@@ -261,6 +285,52 @@
         line-height: 20px;
         font-size: 12px;
         margin-left: 5px;
+    }
+
+    .bookmarks-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .bookmark-card {
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .bookmark-card h4 {
+        margin: 0 0 5px 0;
+        color: #1e3d58;
+    }
+    
+    .bookmark-card p {
+        margin: 0 0 10px 0;
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .bookmark-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8em;
+        color: #777;
+        margin-bottom: 10px;
+    }
+    
+    .bookmark-type {
+        background-color: #e6f7ff;
+        padding: 3px 6px;
+        border-radius: 10px;
+        color: #1e3d58;
+    }
+    
+    .view-bookmark {
+        font-size: 0.9em;
+        color: #1e3d58;
+        text-decoration: underline;
     }
 </style>
 {% endblock %}

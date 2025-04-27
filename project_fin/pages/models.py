@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -141,3 +143,30 @@ class GuideReview(models.Model):
     
     def __str__(self):
         return f"Review by {self.traveler.username} for {self.guide.username}"
+
+# New Bookmark Model
+class Bookmark(models.Model):
+    """Represents a bookmarked location for a user."""
+    BOOKMARK_TYPES = [
+        ('attraction', 'Attraction'),
+        ('restaurant', 'Restaurant'),
+        ('lodging', 'Accommodation'),
+        ('other', 'Other'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bookmarks')
+    name = models.CharField(max_length=255)
+    address = models.TextField(blank=True, null=True)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    place_id = models.CharField(max_length=255, blank=True, null=True, unique=True) # Google Place ID, optional but useful
+    type = models.CharField(max_length=20, choices=BOOKMARK_TYPES, default='other')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('user', 'latitude', 'longitude') # Prevent duplicate bookmarks for the same location
+
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
