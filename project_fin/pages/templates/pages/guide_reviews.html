@@ -10,18 +10,9 @@
     <div class="guide-rating-summary">
         <h3>Overall Rating</h3>
         <div class="rating-display">
-            <div class="large-stars">
-                {% for i in "12345" %}
-                    {% if forloop.counter <= avg_rating|floatformat:"0" %}
-                        <span class="star filled">★</span>
-                    {% else %}
-                        <span class="star">★</span>
-                    {% endif %}
-                {% endfor %}
-            </div>
             <div class="rating-stats">
                 <span class="rating-value">{{ avg_rating|floatformat:"1" }}</span>
-                <span class="review-count">from {{ reviews.count }} reviews</span>
+                <span class="rating-value">({{ avg_rating|floatformat:"1" }} / 5 Stars)</span>
             </div>
         </div>
     </div>
@@ -64,17 +55,6 @@
             <p>As travelers book your tours and work with you, they can leave reviews about their experience.</p>
         </div>
     {% endif %}
-    
-    <div class="reviews-tips">
-        <h3>Tips for Getting Great Reviews</h3>
-        <ul>
-            <li>Respond promptly to traveler inquiries</li>
-            <li>Be clear about what to expect on your tours</li>
-            <li>Personalize experiences for your travelers</li>
-            <li>Share your local knowledge and insights</li>
-            <li>Ask satisfied travelers to leave reviews</li>
-        </ul>
-    </div>
 </div>
 
 <style>

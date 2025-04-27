@@ -584,30 +584,40 @@ def browse_guides_view(request):
     if trip_area_id:
         selected_trip_area = get_object_or_404(TripArea, id=trip_area_id, user=request.user)
     
-    # Get available guides and their tours
-    guides = User.objects.filter(role='guide')
-    tours = Tour.objects.filter(guide__role='guide').select_related('guide')
-    
-    # Get average ratings for each guide
-    guides_with_ratings = guides.annotate(
+    # Get available guides with average ratings and review counts
+    guides_with_ratings = User.objects.filter(role='guide').annotate(
         avg_rating=Avg('reviews_received__rating'),
-        review_count=Count('reviews_received')
+        review_count=Count('reviews_received__id') # Use reviews_received__id for accurate count
     )
     
-    # If trip area is selected, get any assigned guide
-    assigned_guide = None
-    if selected_trip_area and selected_trip_area.assigned_guide:
-        assigned_guide = selected_trip_area.assigned_guide
+    # Get tours and annotate their guides with ratings
+    tours = Tour.objects.filter(guide__role='guide').select_related('guide').annotate(
+        guide_avg_rating=Avg('guide__reviews_received__rating'),
+        guide_review_count=Count('guide__reviews_received__id') # Use reviews_received__id
+    )
     
+    # If trip area is selected, get the assigned guide with annotations
+    assigned_guide_annotated = None
+    if selected_trip_area and selected_trip_area.assigned_guide:
+        try:
+            # Find the assigned guide within the annotated queryset
+            assigned_guide_annotated = guides_with_ratings.get(id=selected_trip_area.assigned_guide.id)
+        except User.DoesNotExist:
+            # Fallback if guide not found in annotated list (shouldn't normally happen)
+            assigned_guide_annotated = selected_trip_area.assigned_guide
+            # Manually add default annotation attributes if needed
+            assigned_guide_annotated.avg_rating = 0
+            assigned_guide_annotated.review_count = 0
+            
     # Get user's trip areas for the dropdown
     trip_areas = TripArea.objects.filter(user=request.user)
     
     return render(request, 'pages/browse_guides.html', {
-        'guides': guides_with_ratings,
+        'guides': guides_with_ratings, # Keep for potential separate guide listing
         'tours': tours,
         'trip_areas': trip_areas,
         'selected_trip_area': selected_trip_area,
-        'assigned_guide': assigned_guide
+        'assigned_guide': assigned_guide_annotated # Pass the annotated guide object
     })
 
 @login_required
