@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -124,3 +125,19 @@ class TripAlert(models.Model):
 
     def __str__(self):
         return self.title
+
+class GuideReview(models.Model):
+    traveler = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_given')
+    guide = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_received')
+    trip_area = models.ForeignKey(TripArea, on_delete=models.CASCADE, related_name='reviews', null=True, blank=True)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        # Prevent duplicate reviews for the same guide-traveler-trip combination
+        unique_together = ('traveler', 'guide', 'trip_area')
+    
+    def __str__(self):
+        return f"Review by {self.traveler.username} for {self.guide.username}"

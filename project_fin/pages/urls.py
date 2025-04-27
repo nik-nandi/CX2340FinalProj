@@ -58,4 +58,10 @@ urlpatterns = [
     path('guide/alerts/create/', views.create_alert_view, name='create_alert'),
     path('guide/alerts/<int:alert_id>/edit/', views.edit_alert_view, name='edit_alert'),
     path('guide/alerts/<int:alert_id>/delete/', views.delete_alert_view, name='delete_alert'),
+
+    # Review routes
+    path('guides/<int:guide_id>/', views.guide_profile_view, name='guide_profile'),
+    path('guides/<int:guide_id>/review/', views.submit_review_view, name='submit_review'),
+    path('reviews/my/', views.my_reviews_view, name='my_reviews'),
+    path('guides/reviews/', views.guide_reviews_view, name='guide_reviews'),
 ]

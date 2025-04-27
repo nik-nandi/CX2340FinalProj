@@ -36,6 +36,9 @@
                                 <a href="{% url 'send_inquiry_for_trip' trip.id %}" class="guide-btn contact-btn">
                                     <span class="icon">✉</span> Contact Guide
                                 </a>
+                                <a href="{% url 'guide_profile' trip.assigned_guide.id %}" class="guide-btn view-profile-btn">
+                                    <span class="icon">👤</span> View Profile
+                                </a>
                                 <a href="{% url 'trip_alerts' trip.id %}" class="guide-btn alerts-btn">
                                     <span class="icon">🔔</span> Alerts 
                                     {% with alert_count=trip.alerts.filter.is_active.count %}
@@ -79,6 +82,7 @@
                 <a href="{% url 'map_ui' %}" class="btn">View and Plan Trips</a>
                 <a href="{% url 'browse_guides' %}" class="btn">Browse Tour Guides</a>
                 <a href="{% url 'my_inquiries' %}" class="btn">My Guide Inquiries</a>
+                <a href="{% url 'my_reviews' %}" class="btn">My Guide Reviews</a>
             </div>
         </div>
         {% endif %}
@@ -113,6 +117,14 @@
                     {% with new_inquiries=user.received_inquiries.filter.status.new.count %}
                     {% if new_inquiries > 0 %}
                     <span class="inquiry-badge">{{ new_inquiries }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </a>
+                <a href="{% url 'guide_reviews' %}" class="btn">
+                    My Reviews
+                    {% with new_reviews=user.reviews_received.count %}
+                    {% if new_reviews > 0 %}
+                    <span class="review-badge">{{ new_reviews }}</span>
                     {% endif %}
                     {% endwith %}
                 </a>
@@ -227,6 +239,28 @@
     .guide-actions form {
         margin: 0;
         padding: 0;
+    }
+    
+    .view-profile-btn {
+        background-color: #795548;
+        color: white;
+    }
+    
+    .view-profile-btn:hover {
+        background-color: #5d4037;
+    }
+    
+    .review-badge {
+        display: inline-block;
+        background-color: #ff9800;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        text-align: center;
+        line-height: 20px;
+        font-size: 12px;
+        margin-left: 5px;
     }
 </style>
 {% endblock %}

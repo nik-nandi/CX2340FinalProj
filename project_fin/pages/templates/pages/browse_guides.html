@@ -30,7 +30,23 @@
                 <div class="guide-info">
                     <h3>{{ assigned_guide.username }}</h3>
                     <p>{{ assigned_guide.email }}</p>
+                    <div class="guide-rating">
+                        {% with avg_rating=assigned_guide.reviews_received.all|length|default:"0" %}
+                        <div class="stars">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= assigned_guide.avg_rating|floatformat:"0"|default:"0" %}
+                                    <span class="star filled">★</span>
+                                {% else %}
+                                    <span class="star">★</span>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="rating-text">{{ assigned_guide.avg_rating|floatformat:"1"|default:"No Rating" }}</span>
+                            <span class="review-count">({{ assigned_guide.review_count|default:"0" }} reviews)</span>
+                        </div>
+                        {% endwith %}
+                    </div>
                     <div class="guide-actions">
+                        <a href="{% url 'guide_profile' assigned_guide.id %}" class="btn-small">View Profile</a>
                         <form action="{% url 'remove_guide' selected_trip_area.id %}" method="post">
                             {% csrf_token %}
                             <button type="submit" class="btn-small">Remove Guide</button>
@@ -52,13 +68,29 @@
                     <p>{{ tour.description|truncatechars:150 }}</p>
                     <div class="tour-details">
                         <p><strong>Guide:</strong> {{ tour.guide.username }}</p>
+                        <div class="guide-rating">
+                            {% with avg_rating=tour.guide.avg_rating|default:"0" review_count=tour.guide.review_count|default:"0" %}
+                            <div class="stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= avg_rating|floatformat:"0" %}
+                                        <span class="star filled">★</span>
+                                    {% else %}
+                                        <span class="star">★</span>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="rating-text">{{ avg_rating|floatformat:"1" }}</span>
+                                <span class="review-count">({{ review_count }} reviews)</span>
+                            </div>
+                            {% endwith %}
+                        </div>
                         <p><strong>Duration:</strong> {{ tour.duration }}</p>
                         <p><strong>Price:</strong> ${{ tour.price }}</p>
                         <p><strong>Location:</strong> {{ tour.location }}</p>
                     </div>
                     
-                    {% if selected_trip_area and assigned_guide.id != tour.guide.id %}
                     <div class="tour-actions">
+                        <a href="{% url 'guide_profile' tour.guide.id %}" class="btn-small">View Guide Profile</a>
+                        {% if selected_trip_area and assigned_guide.id != tour.guide.id %}
                         <form action="{% url 'assign_guide' %}" method="post">
                             {% csrf_token %}
                             <input type="hidden" name="trip_area_id" value="{{ selected_trip_area.id }}">
@@ -67,8 +99,8 @@
                                 <span class="icon">✓</span> Select this Guide
                             </button>
                         </form>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -199,6 +231,42 @@
     
     .select-btn:hover {
         background-color: #0069d9;
+    }
+    
+    .guide-rating {
+        margin: 10px 0;
+    }
+    
+    .stars {
+        display: flex;
+        align-items: center;
+    }
+    
+    .star {
+        color: #ddd;
+        font-size: 18px;
+    }
+    
+    .star.filled {
+        color: #f8ce0b;
+    }
+    
+    .rating-text {
+        margin-left: 5px;
+        font-weight: bold;
+    }
+    
+    .review-count {
+        margin-left: 5px;
+        font-size: 0.9em;
+        color: #777;
+    }
+    
+    .tour-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 15px;
     }
 </style>
 {% endblock %}

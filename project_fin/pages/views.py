@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import User, TripArea, TripLocation, ItineraryItem, Tour, TourInquiry, TripAlert
+from .models import User, TripArea, TripLocation, ItineraryItem, Tour, TourInquiry, TripAlert, GuideReview
 from django.contrib.auth import login
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
@@ -588,6 +588,12 @@ def browse_guides_view(request):
     guides = User.objects.filter(role='guide')
     tours = Tour.objects.filter(guide__role='guide').select_related('guide')
     
+    # Get average ratings for each guide
+    guides_with_ratings = guides.annotate(
+        avg_rating=Avg('reviews_received__rating'),
+        review_count=Count('reviews_received')
+    )
+    
     # If trip area is selected, get any assigned guide
     assigned_guide = None
     if selected_trip_area and selected_trip_area.assigned_guide:
@@ -597,11 +603,138 @@ def browse_guides_view(request):
     trip_areas = TripArea.objects.filter(user=request.user)
     
     return render(request, 'pages/browse_guides.html', {
-        'guides': guides,
+        'guides': guides_with_ratings,
         'tours': tours,
         'trip_areas': trip_areas,
         'selected_trip_area': selected_trip_area,
         'assigned_guide': assigned_guide
+    })
+
+@login_required
+def guide_profile_view(request, guide_id):
+    """View a specific guide's profile and reviews"""
+    if not request.user.is_traveler():
+        messages.error(request, "This feature is only for travelers.")
+        return redirect('profile')
+    
+    guide = get_object_or_404(User, id=guide_id, role='guide')
+    tours = Tour.objects.filter(guide=guide)
+    reviews = GuideReview.objects.filter(guide=guide)
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    # Get the user's trip areas to allow them to select one for review
+    trip_areas = TripArea.objects.filter(
+        user=request.user, 
+        assigned_guide=guide
+    )
+    
+    # Check if the user has already reviewed this guide
+    user_reviews = GuideReview.objects.filter(
+        traveler=request.user,
+        guide=guide
+    )
+    
+    has_reviewed = user_reviews.exists()
+    user_can_review = trip_areas.exists() and not has_reviewed
+    
+    return render(request, 'pages/guide_profile.html', {
+        'guide': guide,
+        'tours': tours,
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'trip_areas': trip_areas,
+        'user_can_review': user_can_review,
+        'has_reviewed': has_reviewed,
+        'user_review': user_reviews.first() if has_reviewed else None
+    })
+
+@login_required
+def submit_review_view(request, guide_id):
+    """Submit a review for a guide"""
+    if not request.user.is_traveler():
+        messages.error(request, "Only travelers can submit reviews.")
+        return redirect('profile')
+    
+    guide = get_object_or_404(User, id=guide_id, role='guide')
+    
+    # Check if user has a trip with this guide assigned
+    user_trips_with_guide = TripArea.objects.filter(
+        user=request.user, 
+        assigned_guide=guide
+    )
+    
+    if not user_trips_with_guide.exists():
+        messages.error(request, "You can only review guides that have been assigned to your trips.")
+        return redirect('guide_profile', guide_id=guide_id)
+    
+    # Check if user has already reviewed this guide
+    existing_review = GuideReview.objects.filter(
+        traveler=request.user,
+        guide=guide
+    ).first()
+    
+    if request.method == 'POST':
+        trip_area_id = request.POST.get('trip_area')
+        rating = request.POST.get('rating')
+        comment = request.POST.get('comment')
+        
+        if not all([trip_area_id, rating, comment]):
+            messages.error(request, "All fields are required.")
+            return redirect('submit_review', guide_id=guide_id)
+        
+        trip_area = get_object_or_404(TripArea, id=trip_area_id, user=request.user)
+        
+        # Update existing review or create new one
+        if existing_review:
+            existing_review.rating = rating
+            existing_review.comment = comment
+            existing_review.trip_area = trip_area
+            existing_review.save()
+            messages.success(request, "Your review has been updated.")
+        else:
+            GuideReview.objects.create(
+                traveler=request.user,
+                guide=guide,
+                trip_area=trip_area,
+                rating=rating,
+                comment=comment
+            )
+            messages.success(request, "Your review has been submitted.")
+        
+        return redirect('guide_profile', guide_id=guide_id)
+    
+    return render(request, 'pages/submit_review.html', {
+        'guide': guide,
+        'trip_areas': user_trips_with_guide,
+        'existing_review': existing_review
+    })
+
+@login_required
+def my_reviews_view(request):
+    """View all reviews submitted by the logged-in traveler"""
+    if not request.user.is_traveler():
+        messages.error(request, "This feature is only for travelers.")
+        return redirect('profile')
+    
+    reviews = GuideReview.objects.filter(traveler=request.user)
+    
+    return render(request, 'pages/my_reviews.html', {
+        'reviews': reviews
+    })
+
+@login_required
+def guide_reviews_view(request):
+    """View for guides to see reviews about them"""
+    if not request.user.is_guide():
+        messages.error(request, "This feature is only for tour guides.")
+        return redirect('profile')
+    
+    reviews = GuideReview.objects.filter(guide=request.user)
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    return render(request, 'pages/guide_reviews.html', {
+        'reviews': reviews,
+        'avg_rating': avg_rating
     })
 
 @login_required

@@ -26,6 +26,7 @@
                             {% endif %}
                             {% endwith %}
                         </a>
+                        <a href="{% url 'guide_reviews' %}">My Reviews</a>
                     {% else %}
                         <a href="{% url 'profile' %}">My Profile</a>
                         <a href="{% url 'map_ui' %}">My Map</a>
@@ -33,6 +34,7 @@
                         <a href="{% url 'assistant' %}">My Assistant</a>
                         <a href="{% url 'translator' %}">My Translator</a>
                         <a href="{% url 'my_inquiries' %}">My Inquiries</a>
+                        <a href="{% url 'my_reviews' %}">My Reviews</a>
                         <a href="{% url 'send_inquiry' %}">Contact Guide</a>
                     {% endif %}
                 </div>

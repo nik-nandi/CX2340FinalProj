@@ -1,0 +1,140 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="my-reviews-container">
+    <div class="my-reviews-header">
+        <h2>My Guide Reviews</h2>
+        <a href="{% url 'profile' %}" class="btn">Back to Profile</a>
+    </div>
+    
+    {% if reviews %}
+        <div class="reviews-list">
+            {% for review in reviews %}
+                <div class="review-item">
+                    <div class="review-guide-info">
+                        <h3>{{ review.guide.username }}</h3>
+                        <div class="review-trip">
+                            Trip: <span>{{ review.trip_area.name }}</span>
+                        </div>
+                        <div class="review-date">
+                            Reviewed on: {{ review.created_at|date:"F j, Y" }}
+                        </div>
+                    </div>
+                    
+                    <div class="review-content">
+                        <div class="review-rating">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}
+                                    <span class="star filled">★</span>
+                                {% else %}
+                                    <span class="star">★</span>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="rating-text">{{ review.rating }} out of 5</span>
+                        </div>
+                        
+                        <div class="review-comment">
+                            {{ review.comment }}
+                        </div>
+                    </div>
+                    
+                    <div class="review-actions">
+                        <a href="{% url 'guide_profile' review.guide.id %}" class="btn-small">View Guide Profile</a>
+                        <a href="{% url 'submit_review' review.guide.id %}" class="btn-small edit-btn">Edit Review</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-reviews">
+            <p>You haven't submitted any reviews yet.</p>
+            <p>After you work with a tour guide, you can rate your experience to help other travelers.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .my-reviews-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .my-reviews-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .reviews-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .review-item {
+        display: grid;
+        grid-template-columns: 200px 1fr auto;
+        gap: 20px;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    @media (max-width: 768px) {
+        .review-item {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+    }
+    
+    .review-guide-info h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    
+    .review-trip, .review-date {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .review-rating {
+        margin-bottom: 15px;
+    }
+    
+    .star {
+        color: #ddd;
+        font-size: 18px;
+    }
+    
+    .star.filled {
+        color: #f8ce0b;
+    }
+    
+    .rating-text {
+        margin-left: 10px;
+        font-weight: bold;
+    }
+    
+    .review-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .edit-btn {
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+    }
+    
+    .no-reviews {
+        text-align: center;
+        padding: 40px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
