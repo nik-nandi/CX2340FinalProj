@@ -1,0 +1,163 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="inquiries-container">
+    <div class="inquiries-header">
+        <h2>My Inquiries to Tour Guides</h2>
+        <div class="inquiries-actions">
+            <a href="{% url 'profile' %}" class="btn">Back to Profile</a>
+            <a href="{% url 'send_inquiry' %}" class="btn">New Inquiry</a>
+        </div>
+    </div>
+    
+    {% if inquiries %}
+        <div class="inquiries-list">
+            {% for inquiry in inquiries %}
+                <div class="inquiry-item">
+                    <div class="inquiry-info">
+                        <h3>{{ inquiry.subject }}</h3>
+                        <div class="inquiry-meta">
+                            <span><strong>To:</strong> {{ inquiry.guide.username }}</span>
+                            <span><strong>Trip:</strong> {{ inquiry.trip_area.name }}</span>
+                            <span><strong>Sent:</strong> {{ inquiry.created_at|date:"F j, Y, g:i a" }}</span>
+                            <span class="status {{ inquiry.status }}"><strong>Status:</strong> {{ inquiry.get_status_display }}</span>
+                        </div>
+                        <div class="inquiry-message">
+                            <p>{{ inquiry.message|linebreaks }}</p>
+                        </div>
+                        
+                        {% if inquiry.response %}
+                            <div class="inquiry-response">
+                                <h4>Guide's Response:</h4>
+                                <p>{{ inquiry.response|linebreaks }}</p>
+                                <span class="response-date">Responded on: {{ inquiry.updated_at|date:"F j, Y, g:i a" }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="inquiry-actions">
+                        <a href="{% url 'inquiry_detail' inquiry.id %}" class="btn-small">View Details</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-inquiries">
+            <p>You haven't sent any inquiries to tour guides yet.</p>
+            <a href="{% url 'send_inquiry' %}" class="btn">Send Your First Inquiry</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .inquiries-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .inquiries-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .inquiries-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .inquiries-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .inquiry-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .inquiry-info {
+        flex: 1;
+    }
+    
+    .inquiry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin: 10px 0;
+        font-size: 0.9em;
+        color: #555;
+    }
+    
+    .status {
+        padding: 3px 8px;
+        border-radius: 12px;
+        background-color: #eee;
+    }
+    
+    .status.new {
+        background-color: #e3f2fd;
+        color: #0d47a1;
+    }
+    
+    .status.read {
+        background-color: #fff3e0;
+        color: #e65100;
+    }
+    
+    .status.replied {
+        background-color: #e8f5e9;
+        color: #1b5e20;
+    }
+    
+    .status.archived {
+        background-color: #f5f5f5;
+        color: #616161;
+    }
+    
+    .inquiry-message {
+        margin: 15px 0;
+        padding: 10px;
+        background-color: #fff;
+        border-radius: 4px;
+        border-left: 3px solid #ddd;
+    }
+    
+    .inquiry-response {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: #f0f8ff;
+        border-radius: 4px;
+        border-left: 3px solid #4fc3f7;
+    }
+    
+    .response-date {
+        display: block;
+        margin-top: 10px;
+        font-size: 0.8em;
+        color: #777;
+        text-align: right;
+    }
+    
+    .inquiry-actions {
+        align-self: flex-start;
+    }
+    
+    .no-inquiries {
+        text-align: center;
+        padding: 50px 0;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    
+    .no-inquiries p {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}

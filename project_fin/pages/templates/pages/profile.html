@@ -1,0 +1,232 @@
+{% extends 'pages/base.html' %}
+{% block content %}
+<div class="profile-container">
+    {% if user.is_admin %}
+        {% include 'pages/admin_dashboard.html' %}
+    {% else %}
+        <h2>Welcome to Your Profile</h2>
+        
+        <div class="profile-card">
+            <h3>Account Information</h3>
+            <p><strong>Username:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Account Type:</strong> {{ user.get_role_display }}</p>
+            <p><strong>Member Since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+        </div>
+        
+        {% if user.is_traveler %}
+        <div class="profile-section">
+            <h3>My Travel Plans</h3>
+            {% if trip_areas %}
+                <div class="trip-areas">
+                    {% for trip in trip_areas %}
+                    <div class="trip-card">
+                        <h4>{{ trip.name }}</h4>
+                        {% if trip.description %}
+                        <p>{{ trip.description }}</p>
+                        {% endif %}
+                        <p><strong>Location:</strong> {{ trip.latitude }}, {{ trip.longitude }}</p>
+                        <p><strong>Radius:</strong> {{ trip.radius }} km</p>
+                        <p><strong>Created:</strong> {{ trip.created_at|date:"F j, Y" }}</p>
+                        
+                        {% if trip.assigned_guide %}
+                        <div class="assigned-guide">
+                            <p><strong>Tour Guide:</strong> {{ trip.assigned_guide.username }}</p>
+                            <div class="guide-actions">
+                                <a href="{% url 'send_inquiry_for_trip' trip.id %}" class="guide-btn contact-btn">
+                                    <span class="icon">✉</span> Contact Guide
+                                </a>
+                                <a href="{% url 'trip_alerts' trip.id %}" class="guide-btn alerts-btn">
+                                    <span class="icon">🔔</span> Alerts 
+                                    {% with alert_count=trip.alerts.filter.is_active.count %}
+                                    {% if alert_count > 0 %}
+                                    <span class="alert-badge">{{ alert_count }}</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </a>
+                                <form action="{% url 'remove_guide' trip.id %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="profile">
+                                    <button type="submit" class="guide-btn remove-btn">
+                                        <span class="icon">✕</span> Remove Guide
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        <a href="{% url 'browse_guides' %}?trip_area={{ trip.id }}" class="guide-btn find-btn">
+                            <span class="icon">🔍</span> Find a Tour Guide
+                        </a>
+                        {% endif %}
+                        
+                        {% if trip.locations.all %}
+                        <div class="trip-locations">
+                            <h5>Saved Locations ({{ trip.locations.count }})</h5>
+                            <ul>
+                                {% for location in trip.locations.all %}
+                                <li>{{ location.name }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>You haven't created any travel plans yet.</p>
+            {% endif %}
+            <div class="profile-actions">
+                <a href="{% url 'map_ui' %}" class="btn">View and Plan Trips</a>
+                <a href="{% url 'browse_guides' %}" class="btn">Browse Tour Guides</a>
+                <a href="{% url 'my_inquiries' %}" class="btn">My Guide Inquiries</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if user.is_guide %}
+        <div class="profile-section">
+            <h3>My Tour Offerings</h3>
+            {% if user.tours.all %}
+                <div class="tours-grid">
+                    {% for tour in user.tours.all %}
+                    <div class="tour-card">
+                        <h4>{{ tour.name }}</h4>
+                        <p>{{ tour.description|truncatechars:100 }}</p>
+                        <p><strong>Duration:</strong> {{ tour.duration }}</p>
+                        <p><strong>Price:</strong> ${{ tour.price }}</p>
+                        <p><strong>Location:</strong> {{ tour.location }}</p>
+                        <a href="{% url 'edit_tour' tour.id %}" class="btn-small">Edit</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>You haven't created any tours yet.</p>
+            {% endif %}
+            <div class="profile-actions">
+                <a href="{% url 'create_tour' %}" class="btn">Create Tour</a>
+                <a href="{% url 'my_tours' %}" class="btn">Manage Tours</a>
+                <a href="{% url 'guide_alerts' %}" class="btn">
+                    Manage Alerts
+                </a>
+                <a href="{% url 'guide_inbox' %}" class="btn">
+                    Traveler Inquiries
+                    {% with new_inquiries=user.received_inquiries.filter.status.new.count %}
+                    {% if new_inquiries > 0 %}
+                    <span class="inquiry-badge">{{ new_inquiries }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<style>
+    .inquiry-badge {
+        display: inline-block;
+        background-color: #f44336;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        text-align: center;
+        line-height: 20px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .alert-badge {
+        display: inline-block;
+        background-color: #ff9800;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        text-align: center;
+        line-height: 20px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .guide-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+    }
+    
+    .guide-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .contact-btn {
+        background-color: #4CAF50;
+        color: white;
+    }
+    
+    .contact-btn:hover {
+        background-color: #3e8e41;
+    }
+    
+    .alerts-btn {
+        background-color: #ff9800;
+        color: white;
+    }
+    
+    .alerts-btn:hover {
+        background-color: #f57c00;
+    }
+    
+    .remove-btn {
+        background-color: #f8f9fa;
+        color: #dc3545;
+        border: 1px solid #dc3545;
+    }
+    
+    .remove-btn:hover {
+        background-color: #f8d7da;
+    }
+    
+    .find-btn {
+        background-color: #007bff;
+        color: white;
+        margin-top: 12px;
+        display: inline-flex;
+    }
+    
+    .find-btn:hover {
+        background-color: #0069d9;
+    }
+    
+    .guide-btn .icon {
+        margin-right: 6px;
+        font-weight: bold;
+    }
+    
+    .assigned-guide {
+        border-top: 1px solid #eee;
+        padding-top: 12px;
+        margin-top: 12px;
+    }
+    
+    .assigned-guide p {
+        margin-bottom: 8px;
+    }
+    
+    /* Make sure the form doesn't add extra spacing */
+    .guide-actions form {
+        margin: 0;
+        padding: 0;
+    }
+</style>
+{% endblock %}

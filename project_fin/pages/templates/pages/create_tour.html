@@ -1,0 +1,104 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="tour-form-container">
+    <div class="tour-header">
+        <h2>Create a New Tour</h2>
+        <a href="{% url 'profile' %}" class="btn">← Back to Profile</a>
+    </div>
+    
+    <form method="post" class="tour-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="name">Tour Name:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Description:</label>
+            <textarea id="description" name="description" rows="5" required></textarea>
+            <p class="form-help">Describe what travelers can expect from your tour.</p>
+        </div>
+        
+        <div class="form-group">
+            <label for="location">Location:</label>
+            <input type="text" id="location" name="location" required>
+            <p class="form-help">The general area where you offer this tour.</p>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group half">
+                <label for="duration">Duration:</label>
+                <input type="text" id="duration" name="duration" required>
+                <p class="form-help">Example: "2 hours", "Half day", "Full day"</p>
+            </div>
+            
+            <div class="form-group half">
+                <label for="price">Price (USD):</label>
+                <input type="number" id="price" name="price" min="0" step="0.01" required>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="max_travelers">Maximum Travelers:</label>
+            <input type="number" id="max_travelers" name="max_travelers" min="1" value="10">
+        </div>
+        
+        <button type="submit" class="btn">Create Tour</button>
+    </form>
+</div>
+
+<style>
+    .tour-form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .tour-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .tour-form {
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-row {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .form-group.half {
+        flex: 1;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    input, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .form-help {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #666;
+    }
+</style>
+{% endblock %}

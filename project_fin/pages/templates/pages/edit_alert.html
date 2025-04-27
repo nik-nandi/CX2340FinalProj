@@ -1,0 +1,205 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="edit-alert-container">
+    <div class="edit-alert-header">
+        <h2>Edit Trip Alert</h2>
+        <a href="{% url 'guide_alerts' %}" class="btn">← Back to Alerts</a>
+    </div>
+    
+    <div class="edit-alert-content">
+        <div class="edit-alert-form">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Trip Area:</label>
+                    <div class="readonly-field">
+                        {{ alert.trip_area.name }} ({{ alert.trip_area.user.username }})
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="title">Alert Title:</label>
+                    <input type="text" id="title" name="title" value="{{ alert.title }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="4" required>{{ alert.description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="event_date">Event Date (optional):</label>
+                    <input type="datetime-local" id="event_date" name="event_date" 
+                           value="{{ alert.event_date|date:'Y-m-d\TH:i' }}">
+                    <p class="field-help">Leave blank if this alert is not for a specific event</p>
+                </div>
+                <div class="form-group">
+                    <input type="hidden" id="latitude" name="latitude" value="{{ alert.latitude }}" required>
+                    <input type="hidden" id="longitude" name="longitude" value="{{ alert.longitude }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="is_active" class="checkbox-label">
+                        <input type="checkbox" id="is_active" name="is_active" {% if alert.is_active %}checked{% endif %}>
+                        Alert is active and visible to travelers
+                    </label>
+                </div>
+                <button type="submit" class="btn">Update Alert</button>
+            </form>
+        </div>
+        
+        <div class="edit-alert-map">
+            <div id="map" style="height: 500px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let map;
+let alertMarker = null;
+let tripAreaCircle = null;
+
+function initMap() {
+    // Initial location based on the alert
+    const alertLocation = { 
+        lat: {{ alert.latitude }}, 
+        lng: {{ alert.longitude }} 
+    };
+    
+    // Trip area center
+    const tripAreaCenter = {
+        lat: {{ alert.trip_area.latitude }},
+        lng: {{ alert.trip_area.longitude }}
+    };
+    
+    map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 14,
+        center: alertLocation
+    });
+    
+    // Create trip area circle
+    tripAreaCircle = new google.maps.Circle({
+        strokeColor: "#4285F4",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#4285F4",
+        fillOpacity: 0.15,
+        map,
+        center: tripAreaCenter,
+        radius: {{ alert.trip_area.radius }} * 1000  // Convert km to meters
+    });
+    
+    // Create alert marker
+    alertMarker = new google.maps.Marker({
+        position: alertLocation,
+        map,
+        draggable: true
+    });
+    
+    // Handle marker drag end
+    alertMarker.addListener('dragend', function() {
+        updateLocationInputs(alertMarker.getPosition());
+    });
+    
+    // Handle map clicks
+    map.addListener("click", function(e) {
+        const position = e.latLng;
+        alertMarker.setPosition(position);
+        updateLocationInputs(position);
+    });
+}
+
+function updateLocationInputs(position) {
+    document.getElementById('latitude').value = position.lat();
+    document.getElementById('longitude').value = position.lng();
+}
+</script>
+
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap">
+</script>
+
+<style>
+.edit-alert-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.edit-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.edit-alert-content {
+    display: flex;
+    gap: 30px;
+}
+
+.edit-alert-form {
+    flex: 1;
+}
+
+.edit-alert-map {
+    flex: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="datetime-local"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1em;
+}
+
+.readonly-field {
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #495057;
+}
+
+.checkbox-label {
+    display: flex !important;
+    align-items: center;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    margin-right: 10px;
+}
+
+.field-help {
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #666;
+}
+
+@media (max-width: 800px) {
+    .edit-alert-content {
+        flex-direction: column-reverse;
+    }
+    
+    .edit-alert-map {
+        margin-bottom: 20px;
+    }
+}
+</style>
+{% endblock %}

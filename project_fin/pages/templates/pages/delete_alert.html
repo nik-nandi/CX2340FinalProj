@@ -1,0 +1,100 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="delete-alert-container">
+    <div class="delete-alert-box">
+        <h2>Delete Alert</h2>
+        <p>Are you sure you want to delete the alert: <strong>{{ alert.title }}</strong>?</p>
+        <p>This action cannot be undone.</p>
+        
+        <div class="alert-details">
+            <div class="detail-group">
+                <span class="detail-label">Trip Area:</span>
+                <span class="detail-value">{{ alert.trip_area.name }}</span>
+            </div>
+            <div class="detail-group">
+                <span class="detail-label">Traveler:</span>
+                <span class="detail-value">{{ alert.trip_area.user.username }}</span>
+            </div>
+            <div class="detail-group">
+                <span class="detail-label">Created:</span>
+                <span class="detail-value">{{ alert.created_at|date:"F j, Y" }}</span>
+            </div>
+            <div class="detail-group">
+                <span class="detail-label">Description:</span>
+                <span class="detail-value">{{ alert.description|truncatechars:200 }}</span>
+            </div>
+        </div>
+        
+        <form method="post" class="delete-form">
+            {% csrf_token %}
+            <div class="form-actions">
+                <a href="{% url 'guide_alerts' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-danger">Delete Alert</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.delete-alert-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 20px;
+}
+
+.delete-alert-box {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    padding: 30px;
+    max-width: 600px;
+    width: 100%;
+}
+
+.delete-alert-box h2 {
+    margin-top: 0;
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+
+.alert-details {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.detail-group {
+    margin-bottom: 10px;
+}
+
+.detail-label {
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+</style>
+{% endblock %}

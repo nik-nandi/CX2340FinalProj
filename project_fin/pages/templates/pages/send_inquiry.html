@@ -1,0 +1,110 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="inquiry-form-container">
+    <div class="inquiry-header">
+        <h2>Contact Tour Guide</h2>
+        <div class="inquiry-actions">
+            <a href="{% url 'profile' %}" class="btn">Back to Profile</a>
+            <a href="{% url 'my_inquiries' %}" class="btn">My Past Inquiries</a>
+        </div>
+    </div>
+    
+    {% if trip_areas %}
+        <form method="post" class="inquiry-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="trip_area">Select Trip:</label>
+                <select id="trip_area" name="trip_area" required>
+                    <option value="">-- Select a Trip --</option>
+                    {% for area in trip_areas %}
+                        <option value="{{ area.id }}" {% if selected_trip_area.id == area.id %}selected{% endif %}>
+                            {{ area.name }} (Guide: {{ area.assigned_guide.username }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="form-help">Select the trip for which you'd like to contact the guide</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="subject">Subject:</label>
+                <input type="text" id="subject" name="subject" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <textarea id="message" name="message" rows="6" required></textarea>
+                <p class="form-help">Include any specific questions or information for your guide</p>
+            </div>
+            
+            <button type="submit" class="btn">Send Inquiry</button>
+        </form>
+    {% else %}
+        <div class="no-guides-message">
+            <p>You haven't assigned any tour guides to your trips yet.</p>
+            <a href="{% url 'browse_guides' %}" class="btn">Browse Tour Guides</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .inquiry-form-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .inquiry-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .inquiry-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .inquiry-form {
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    input, textarea, select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .form-help {
+        margin-top: 5px;
+        font-size: 0.9em;
+        color: #666;
+    }
+    
+    .no-guides-message {
+        text-align: center;
+        padding: 40px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    
+    .no-guides-message p {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}

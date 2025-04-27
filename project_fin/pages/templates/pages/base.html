@@ -1,0 +1,71 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/style.css' %}">
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Travel Connect</title>
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+    <nav>
+        {% if user.is_authenticated %}
+            <div class="profile-dropdown">
+                <button class="profile-dropbtn">Profile</button>
+                <div class="profile-dropdown-content">
+                    {% if user.is_admin %}
+                        <a href="{% url 'profile' %}">My Dashboard</a>
+                    {% elif user.is_guide %}
+                        <a href="{% url 'profile' %}">My Profile</a>
+                        <a href="{% url 'my_tours' %}">My Tours</a>
+                        <a href="{% url 'create_tour' %}">Create Tour</a>
+                        <a href="{% url 'guide_inbox' %}">
+                            Traveler Inquiries
+                            {% with new_inquiries=user.received_inquiries.filter.status.new.count %}
+                            {% if new_inquiries > 0 %}
+                            <span class="nav-badge">{{ new_inquiries }}</span>
+                            {% endif %}
+                            {% endwith %}
+                        </a>
+                    {% else %}
+                        <a href="{% url 'profile' %}">My Profile</a>
+                        <a href="{% url 'map_ui' %}">My Map</a>
+                        <a href="{% url 'itineraries' %}">My Itineraries</a>
+                        <a href="{% url 'assistant' %}">My Assistant</a>
+                        <a href="{% url 'translator' %}">My Translator</a>
+                        <a href="{% url 'my_inquiries' %}">My Inquiries</a>
+                        <a href="{% url 'send_inquiry' %}">Contact Guide</a>
+                    {% endif %}
+                </div>
+            </div>
+            <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn logout-btn">Logout</button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a>
+            <a href="{% url 'signup' %}">Sign Up</a>
+        {% endif %}
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    <footer>
+        <p>&copy; 2025 Travel Connect</p>
+    </footer>
+
+    <style>
+        .nav-badge {
+            display: inline-block;
+            background-color: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            text-align: center;
+            line-height: 18px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+    </style>
+</body>
+</html>

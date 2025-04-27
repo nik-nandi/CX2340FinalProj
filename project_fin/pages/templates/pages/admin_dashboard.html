@@ -1,0 +1,123 @@
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h2>Admin Dashboard</h2>
+        <p>Welcome back, {{ user.username }}. Here's an overview of your system.</p>
+    </div>
+
+    <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+            <h3>Users</h3>
+            <div class="stat-number">{{ user_count }}</div>
+            <div class="stat-details">
+                <div>Travelers: {{ traveler_count }}</div>
+                <div>Tour Guides: {{ guide_count }}</div>
+                <div>Admins: {{ admin_count }}</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <h3>Trip Areas</h3>
+            <div class="stat-number">{{ trip_area_count }}</div>
+            <div class="stat-details">
+                <div>Average Radius: {{ avg_radius|floatformat:1 }} km</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <h3>Itinerary Items</h3>
+            <div class="stat-number">{{ itinerary_count }}</div>
+            <div class="stat-details">
+                <div>Average per Trip: {{ avg_items_per_trip|floatformat:1 }}</div>
+            </div>
+        </div>
+        <div class="admin-stat-card">
+            <h3>System</h3>
+            <div class="stat-details">
+                <div>Last Login: {{ user.last_login|date:"F j, Y, g:i a" }}</div>
+                <div>Server Time: {% now "F j, Y, g:i a" %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section">
+        <h3>Recent Trip Areas</h3>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>User</th>
+                    <th>Location</th>
+                    <th>Radius</th>
+                    <th>Created</th>
+                    <th>Items</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for area in recent_trip_areas %}
+                <tr>
+                    <td>{{ area.name }}</td>
+                    <td>{{ area.user.username }}</td>
+                    <td>{{ area.latitude|floatformat:4 }}, {{ area.longitude|floatformat:4 }}</td>
+                    <td>{{ area.radius }} km</td>
+                    <td>{{ area.created_at|date:"M d, Y" }}</td>
+                    <td>{{ area.itinerary_items.count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-section">
+        <h3>Manage Users</h3> {# Changed title from Recent Users #}
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Joined</th>
+                    <th>Last Login</th>
+                    <th>Admin?</th>
+                    <th>Actions</th> {# Added Actions column #}
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in all_users %} {# Changed loop variable from user to u to avoid conflict, and iterate over all_users #}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.get_role_display }}</td>
+                    <td>{{ u.date_joined|date:"M d, Y" }}</td>
+                    <td>{{ u.last_login|date:"M d, Y, g:i a" }}</td>
+                    <td>{{ u.is_superuser|yesno:"Yes,No" }}</td>
+                    <td>
+                        {# Link to the Django admin change page for the user #}
+                        <a href="{% url 'admin:pages_user_change' u.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">No users found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="admin-section">
+        <h3>Popular Destinations</h3>
+        <div class="popular-destinations">
+            {% for item in popular_destinations %}
+            <div class="popular-destination-card">
+                <h4>{{ item.name }}</h4>
+                <p>{{ item.address }}</p>
+                <div class="destination-stats">
+                    <span>Added {{ item.count }} times</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="admin-actions">
+        <a href="{% url 'admin:index' %}" class="btn admin-btn">Django Admin</a>
+    </div>
+</div>

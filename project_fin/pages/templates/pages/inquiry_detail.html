@@ -1,0 +1,225 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="inquiry-detail-container">
+    <div class="inquiry-header">
+        <h2>{{ inquiry.subject }}</h2>
+        <div class="inquiry-actions-header">
+            {% if user == inquiry.guide %}
+                <a href="{% url 'guide_inbox' %}" class="btn">Back to Inbox</a>
+            {% else %}
+                <a href="{% url 'my_inquiries' %}" class="btn">Back to My Inquiries</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="inquiry-meta-info">
+        <div class="inquiry-meta-detail">
+            <span><strong>From:</strong> {{ inquiry.traveler.username }}</span>
+            <span><strong>To:</strong> {{ inquiry.guide.username }}</span>
+            <span><strong>Trip:</strong> {{ inquiry.trip_area.name }}</span>
+            <span><strong>Sent:</strong> {{ inquiry.created_at|date:"F j, Y, g:i a" }}</span>
+            <span class="status {{ inquiry.status }}"><strong>Status:</strong> {{ inquiry.get_status_display }}</span>
+        </div>
+        
+        {% if user == inquiry.guide and inquiry.status != 'archived' %}
+            <button id="archive-btn" class="btn-small" data-id="{{ inquiry.id }}">Archive</button>
+        {% endif %}
+    </div>
+    
+    <div class="inquiry-content">
+        <div class="message-container">
+            <div class="message-header">
+                <h3>Original Message</h3>
+            </div>
+            <div class="message-content">
+                {{ inquiry.message|linebreaks }}
+            </div>
+        </div>
+        
+        {% if inquiry.response %}
+            <div class="response-container">
+                <div class="response-header">
+                    <h3>Guide's Response</h3>
+                    <span class="response-date">Sent on: {{ inquiry.updated_at|date:"F j, Y, g:i a" }}</span>
+                </div>
+                <div class="response-content">
+                    {{ inquiry.response|linebreaks }}
+                </div>
+            </div>
+        {% elif user == inquiry.guide %}
+            <div class="response-form-container">
+                <h3>Respond to this Inquiry</h3>
+                <form method="post" class="response-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="response">Your Response:</label>
+                        <textarea id="response" name="response" rows="6" required></textarea>
+                    </div>
+                    <button type="submit" class="btn">Send Response</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .inquiry-detail-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .inquiry-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .inquiry-meta-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f9f9f9;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .inquiry-meta-detail {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .status {
+        padding: 3px 8px;
+        border-radius: 12px;
+        background-color: #eee;
+    }
+    
+    .status.new {
+        background-color: #e3f2fd;
+        color: #0d47a1;
+    }
+    
+    .status.read {
+        background-color: #fff3e0;
+        color: #e65100;
+    }
+    
+    .status.replied {
+        background-color: #e8f5e9;
+        color: #1b5e20;
+    }
+    
+    .status.archived {
+        background-color: #f5f5f5;
+        color: #616161;
+    }
+    
+    .inquiry-content {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+    
+    .message-container, .response-container {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .message-header, .response-header {
+        background-color: #f5f5f5;
+        padding: 10px 15px;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .message-header h3, .response-header h3 {
+        margin: 0;
+        font-size: 1.1em;
+    }
+    
+    .message-content, .response-content {
+        padding: 20px;
+        line-height: 1.6;
+    }
+    
+    .response-date {
+        font-size: 0.9em;
+        color: #777;
+    }
+    
+    .response-form-container {
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .response-form-container h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    
+    textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const archiveBtn = document.getElementById('archive-btn');
+    if (archiveBtn) {
+        archiveBtn.addEventListener('click', function() {
+            const inquiryId = this.dataset.id;
+            
+            // Send request to update status
+            fetch(`/api/inquiries/status/${inquiryId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    status: 'archived'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = "{% url 'guide_inbox' %}";
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    }
+    
+    // Get CSRF token
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit User: {{ user_to_edit.username }}</h2>
+
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group mb-3">
+            <label for="id_username">Username:</label>
+            {{ form.username }} 
+            {% if form.username.errors %}<div class="invalid-feedback d-block">{{ form.username.errors|first }}</div>{% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="id_email">Email:</label>
+            {{ form.email }}
+            {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors|first }}</div>{% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="id_role">Role:</label>
+            {{ form.role }}
+            {% if form.role.errors %}<div class="invalid-feedback d-block">{{ form.role.errors|first }}</div>{% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="id_password">New Password:</label>
+            {{ form.password }}
+            <small class="form-text text-muted">{{ form.password.help_text }}</small>
+            {% if form.password.errors %}<div class="invalid-feedback d-block">{{ form.password.errors|first }}</div>{% endif %}
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="id_confirm_password">Confirm New Password:</label>
+            {{ form.confirm_password }}
+            <small class="form-text text-muted">{{ form.confirm_password.help_text }}</small>
+            {% if form.confirm_password.errors %}<div class="invalid-feedback d-block">{{ form.confirm_password.errors|first }}</div>{% endif %}
+        </div>
+
+        <div class="form-check mb-3">
+            {{ form.is_staff }}
+            <label class="form-check-label" for="id_is_staff">Staff status</label>
+            {% if form.is_staff.errors %}<div class="invalid-feedback d-block">{{ form.is_staff.errors|first }}</div>{% endif %}
+        </div>
+
+        <div class="form-check mb-3">
+            {{ form.is_superuser }}
+            <label class="form-check-label" for="id_is_superuser">Superuser status</label>
+            {% if form.is_superuser.errors %}<div class="invalid-feedback d-block">{{ form.is_superuser.errors|first }}</div>{% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{% url 'profile' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<style>
+/* Basic styling for form elements - adjust as needed */
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Include padding and border in element's total width and height */
+}
+.form-check {
+    display: flex;
+    align-items: center;
+}
+.form-check input[type="checkbox"] {
+    margin-right: 10px;
+}
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875em;
+}
+.alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 5px;
+}
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+.mt-4 { margin-top: 1.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.container { /* Add basic container styling */
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 15px;
+}
+</style>
+
+{% endblock %}

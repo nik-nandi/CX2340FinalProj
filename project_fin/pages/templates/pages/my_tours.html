@@ -1,0 +1,102 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="my-tours-container">
+    <div class="tours-header">
+        <h2>My Tours</h2>
+        <div class="tours-actions">
+            <a href="{% url 'profile' %}" class="btn">← Back to Profile</a>
+            <a href="{% url 'create_tour' %}" class="btn">+ New Tour</a>
+        </div>
+    </div>
+    
+    {% if tours %}
+        <div class="tours-list">
+            {% for tour in tours %}
+                <div class="tour-item">
+                    <div class="tour-details">
+                        <h3>{{ tour.name }}</h3>
+                        <div class="tour-meta">
+                            <span>{{ tour.duration }} | ${{ tour.price }}</span>
+                            <span>{{ tour.location }}</span>
+                            <span>Max: {{ tour.max_travelers }} travelers</span>
+                        </div>
+                        <p>{{ tour.description }}</p>
+                        <div class="created-at">Created: {{ tour.created_at|date:"F j, Y" }}</div>
+                    </div>
+                    <div class="tour-actions">
+                        <a href="{% url 'edit_tour' tour.id %}" class="btn-small">Edit</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-tours">
+            <p>You haven't created any tours yet.</p>
+            <a href="{% url 'create_tour' %}" class="btn">Create Your First Tour</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .my-tours-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .tours-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .tours-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .tours-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .tour-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .tour-details {
+        flex: 1;
+    }
+    
+    .tour-meta {
+        display: flex;
+        gap: 20px;
+        margin: 10px 0;
+        font-size: 0.9em;
+        color: #555;
+    }
+    
+    .created-at {
+        margin-top: 10px;
+        font-size: 0.8em;
+        color: #777;
+    }
+    
+    .tour-actions {
+        align-self: center;
+    }
+    
+    .no-tours {
+        text-align: center;
+        padding: 50px 0;
+    }
+</style>
+{% endblock %}

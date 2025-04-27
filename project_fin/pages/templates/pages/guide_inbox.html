@@ -1,0 +1,265 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="inbox-container">
+    <div class="inbox-header">
+        <h2>Guide Inbox <span class="new-badge" id="new-count">{{ new_inquiries_count }}</span></h2>
+        <div class="inbox-actions">
+            <a href="{% url 'profile' %}" class="btn">Back to Profile</a>
+        </div>
+    </div>
+    
+    <div class="inbox-content">
+        <div class="inbox-filters">
+            <a href="{% url 'guide_inbox' %}" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">All Inquiries</a>
+            <a href="{% url 'guide_inbox' %}?status=new" class="filter-btn {% if status_filter == 'new' %}active{% endif %}">
+                New <span class="badge">{{ new_inquiries_count }}</span>
+            </a>
+            <a href="{% url 'guide_inbox' %}?status=read" class="filter-btn {% if status_filter == 'read' %}active{% endif %}">Read</a>
+            <a href="{% url 'guide_inbox' %}?status=replied" class="filter-btn {% if status_filter == 'replied' %}active{% endif %}">Replied</a>
+            <a href="{% url 'guide_inbox' %}?status=archived" class="filter-btn {% if status_filter == 'archived' %}active{% endif %}">Archived</a>
+        </div>
+        
+        {% if inquiries %}
+            <div class="inquiries-list">
+                {% for inquiry in inquiries %}
+                    <div class="inquiry-item {% if inquiry.status == 'new' %}unread{% endif %}" data-id="{{ inquiry.id }}">
+                        <div class="inquiry-info">
+                            <div class="inquiry-meta">
+                                <h3>{{ inquiry.subject }}</h3>
+                                <span class="status {{ inquiry.status }}">{{ inquiry.get_status_display }}</span>
+                            </div>
+                            <div class="inquiry-details">
+                                <span><strong>From:</strong> {{ inquiry.traveler.username }}</span>
+                                <span><strong>Trip:</strong> {{ inquiry.trip_area.name }}</span>
+                                <span><strong>Received:</strong> {{ inquiry.created_at|date:"F j, Y, g:i a" }}</span>
+                            </div>
+                            <div class="inquiry-preview">
+                                {{ inquiry.message|truncatechars:150 }}
+                            </div>
+                        </div>
+                        <div class="inquiry-actions">
+                            <a href="{% url 'inquiry_detail' inquiry.id %}" class="btn-small">View</a>
+                            {% if inquiry.status != 'archived' %}
+                                <button class="btn-small archive-btn" data-id="{{ inquiry.id }}">Archive</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-inquiries">
+                <p>No inquiries found with the selected filter.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .inbox-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .inbox-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .new-badge {
+        display: inline-block;
+        background-color: #f44336;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        line-height: 24px;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+    
+    .inbox-filters {
+        display: flex;
+        margin-bottom: 20px;
+        background-color: #f5f5f5;
+        padding: 10px;
+        border-radius: 6px;
+    }
+    
+    .filter-btn {
+        padding: 8px 15px;
+        margin-right: 10px;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #333;
+    }
+    
+    .filter-btn.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .badge {
+        display: inline-block;
+        background-color: #f44336;
+        color: white;
+        border-radius: 10px;
+        padding: 0 6px;
+        font-size: 12px;
+        margin-left: 5px;
+    }
+    
+    .inquiries-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .inquiry-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-left: 5px solid transparent;
+    }
+    
+    .inquiry-item.unread {
+        border-left-color: #2196F3;
+        background-color: #f0f8ff;
+    }
+    
+    .inquiry-info {
+        flex: 1;
+    }
+    
+    .inquiry-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .inquiry-meta h3 {
+        margin: 0;
+        font-size: 1.2em;
+    }
+    
+    .inquiry-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 10px;
+        font-size: 0.9em;
+        color: #555;
+    }
+    
+    .inquiry-preview {
+        color: #666;
+        line-height: 1.5;
+    }
+    
+    .status {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    
+    .status.new {
+        background-color: #e3f2fd;
+        color: #0d47a1;
+    }
+    
+    .status.read {
+        background-color: #fff3e0;
+        color: #e65100;
+    }
+    
+    .status.replied {
+        background-color: #e8f5e9;
+        color: #1b5e20;
+    }
+    
+    .status.archived {
+        background-color: #f5f5f5;
+        color: #616161;
+    }
+    
+    .inquiry-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .no-inquiries {
+        text-align: center;
+        padding: 40px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle archive button clicks
+    document.querySelectorAll('.archive-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const inquiryId = this.dataset.id;
+            
+            // Send request to update status
+            fetch(`/api/inquiries/status/${inquiryId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    status: 'archived'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Remove the inquiry item from the list
+                    const inquiryItem = document.querySelector(`.inquiry-item[data-id="${inquiryId}"]`);
+                    if (inquiryItem) {
+                        inquiryItem.style.opacity = '0';
+                        setTimeout(() => {
+                            inquiryItem.remove();
+                            
+                            // Check if there are no more inquiries
+                            if (document.querySelectorAll('.inquiry-item').length === 0) {
+                                const inboxContent = document.querySelector('.inbox-content');
+                                const noInquiries = document.createElement('div');
+                                noInquiries.className = 'no-inquiries';
+                                noInquiries.innerHTML = '<p>No inquiries found with the selected filter.</p>';
+                                inboxContent.appendChild(noInquiries);
+                            }
+                        }, 300);
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+    
+    // Get CSRF token
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    // Add CSRF token to the page
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    document.body.appendChild(csrfInput);
+});
+</script>
+{% endblock %}

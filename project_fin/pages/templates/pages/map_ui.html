@@ -1,0 +1,317 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="map-container">
+    <div class="map-header">
+        <h2>Plan Your Trip</h2>
+        <a href="{% url 'profile' %}" class="btn">← Back to Profile</a>
+    </div>
+    
+    <div class="map-interface">
+        <!-- Add Destination Search Bar -->
+        <div class="search-bar-container">
+            <div class="search-bar">
+                <label for="destination-search">Destination Search</label>
+                <div class="search-input-wrapper">
+                    <input type="text" id="destination-search" placeholder="Search for a location">
+                    <button id="search-button"><i class="search-icon">🔍</i></button>
+                </div>
+                <div id="search-status" class="search-status"></div>
+            </div>
+        </div>
+        
+        <div id="map" style="height: 500px; width: 100%;"></div>
+        
+        <div class="map-controls">
+            <div class="trip-area-section">
+                <h3>Trip Areas</h3>
+                {% if trip_areas %}
+                    <ul class="trip-areas-list">
+                        {% for area in trip_areas %}
+                            <li>
+                                <h4>{{ area.name }}</h4>
+                                <p>{{ area.description }}</p>
+                                <div class="trip-area-actions">
+                                    <button class="btn view-area" data-lat="{{ area.latitude }}" data-lng="{{ area.longitude }}" data-radius="{{ area.radius }}">View on Map</button>
+                                    <a href="{% url 'itineraries' %}?trip_area={{ area.id }}" class="btn">View Itinerary</a>
+                                </div>
+                                
+                                {% if area.locations.all %}
+                                    <div class="locations-list">
+                                        <h5>Selected Locations</h5>
+                                        <ul>
+                                            {% for location in area.locations.all %}
+                                                <li>
+                                                    <strong>{{ location.name }}</strong>
+                                                    <p>{{ location.address }}</p>
+                                                    <button class="btn view-location" data-lat="{{ location.latitude }}" data-lng="{{ location.longitude }}">View</button>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No trip areas created yet. Use the map to create your first trip area.</p>
+                {% endif %}
+            </div>
+            
+            <div class="create-trip-area">
+                <h3>Create a New Trip Area</h3>
+                <form id="trip-area-form" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="create_trip_area" value="1">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description:</label>
+                        <textarea id="description" name="description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="radius">Radius (km):</label>
+                        <input type="number" id="radius" name="radius" value="2" min="1" max="100">
+                    </div>
+                    <input type="hidden" id="latitude" name="latitude">
+                    <input type="hidden" id="longitude" name="longitude">
+                    <p>Click on the map to set the center of your trip area.</p>
+                    <button type="submit" class="btn" disabled id="submit-trip-area">Create Trip Area</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let map;
+let markers = [];
+let currentCircle = null;
+let geocoder;
+let searchMarker = null;
+
+function initMap() {
+    const defaultLocation = { lat: 33.7490, lng: -84.3880 };
+    map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 10,
+        center: defaultLocation,
+        styles: [
+            // Custom map styling for a cleaner look
+            {
+                "featureType": "administrative",
+                "elementType": "geometry",
+                "stylers": [{ "visibility": "off" }]
+            },
+            {
+                "featureType": "poi",
+                "stylers": [{ "visibility": "off" }]
+            },
+            {
+                "featureType": "road",
+                "elementType": "labels.icon",
+                "stylers": [{ "visibility": "off" }]
+            },
+            {
+                "featureType": "transit",
+                "stylers": [{ "visibility": "off" }]
+            }
+        ]
+    });
+    
+    geocoder = new google.maps.Geocoder();
+    
+    // Add click event for setting trip area
+    map.addListener("click", (e) => {
+        const clickedPosition = e.latLng;
+        handleTripAreaSelection(clickedPosition);
+    });
+    
+    // Initialize view-area buttons
+    document.querySelectorAll('.view-area').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            const radius = parseFloat(this.dataset.radius);
+            const center = new google.maps.LatLng(lat, lng);
+            
+            map.setCenter(center);
+            map.setZoom(12);
+            
+            // Clear existing circle if any
+            if (currentCircle) {
+                currentCircle.setMap(null);
+            }
+            
+            // Draw circle to represent the trip area
+            currentCircle = new google.maps.Circle({
+                strokeColor: "#FF0000",
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: "#FF0000",
+                fillOpacity: 0.35,
+                map,
+                center: center,
+                radius: radius * 1000  // Convert km to meters
+            });
+        });
+    });
+    
+    // Initialize view-location buttons
+    document.querySelectorAll('.view-location').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            const center = new google.maps.LatLng(lat, lng);
+            
+            map.setCenter(center);
+            map.setZoom(16);
+        });
+    });
+
+    // Set up destination search functionality
+    setupDestinationSearch();
+}
+
+function setupDestinationSearch() {
+    const searchInput = document.getElementById('destination-search');
+    const searchButton = document.getElementById('search-button');
+    const searchStatus = document.getElementById('search-status');
+    
+    // Add autocomplete to search input
+    const autocomplete = new google.maps.places.Autocomplete(searchInput, {
+        fields: ['geometry', 'name', 'formatted_address'],
+        types: ['geocode', 'establishment']
+    });
+    
+    // Handle search button click
+    searchButton.addEventListener('click', function() {
+        performSearch();
+    });
+    
+    // Handle enter key press in search input
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch();
+        }
+    });
+    
+    // Handle place selection from autocomplete
+    autocomplete.addListener('place_changed', function() {
+        const place = autocomplete.getPlace();
+        if (place.geometry && place.geometry.location) {
+            if (searchMarker) {
+                searchMarker.setMap(null);
+                searchMarker = null;
+            }
+            
+            map.setCenter(place.geometry.location);
+            map.setZoom(14);
+            
+            searchStatus.innerHTML = `Found: ${place.formatted_address || place.name}`;
+            searchStatus.className = 'search-status success';
+            
+             setTimeout(() => {
+                searchStatus.innerHTML = '';
+                searchStatus.className = 'search-status';
+            }, 5000);
+        }
+    });
+    
+    function performSearch() {
+        const searchText = searchInput.value;
+        if (!searchText.trim()) {
+            searchStatus.innerHTML = 'Please enter a location to search';
+            searchStatus.className = 'search-status error';
+            return;
+        }
+        
+        searchStatus.innerHTML = 'Searching...';
+        searchStatus.className = 'search-status searching';
+        
+        geocoder.geocode({ address: searchText }, function(results, status) {
+            if (status === google.maps.GeocoderStatus.OK && results[0]) {
+                // Clear previous search marker if exists
+                if (searchMarker) {
+                    searchMarker.setMap(null);
+                    searchMarker = null;
+                }
+                
+                const location = results[0].geometry.location;
+                
+                // Center map on the searched location
+                map.setCenter(location);
+                map.setZoom(14);
+                
+                // Show success message
+                searchStatus.innerHTML = `Found: ${results[0].formatted_address}`;
+                searchStatus.className = 'search-status success';
+                
+                // Clear status after 5 seconds
+                setTimeout(() => {
+                    searchStatus.innerHTML = '';
+                    searchStatus.className = 'search-status';
+                }, 5000);
+            } else {
+                // Show error message
+                searchStatus.innerHTML = 'Location not found. Please try a different search.';
+                searchStatus.className = 'search-status error';
+            }
+        });
+    }
+}
+
+function handleTripAreaSelection(position) {
+    clearMarkers();
+    
+    // Add marker at clicked position
+    const marker = new google.maps.Marker({
+        position: position,
+        map: map,
+        animation: google.maps.Animation.DROP
+    });
+    markers.push(marker);
+    
+    // Update form fields
+    document.getElementById('latitude').value = position.lat();
+    document.getElementById('longitude').value = position.lng();
+    document.getElementById('submit-trip-area').disabled = false;
+    
+    // Draw preview circle
+    const radius = parseInt(document.getElementById('radius').value);
+    if (currentCircle) {
+        currentCircle.setMap(null);
+    }
+    currentCircle = new google.maps.Circle({
+        strokeColor: "#FF0000",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#FF0000",
+        fillOpacity: 0.35,
+        map,
+        center: position,
+        radius: radius * 1000  // Convert km to meters
+    });
+}
+
+function clearMarkers() {
+    for (let marker of markers) {
+        marker.setMap(null);
+    }
+    markers = [];
+}
+
+// Update radius preview when the input changes
+document.getElementById('radius').addEventListener('change', function() {
+    if (currentCircle) {
+        const value = parseInt(this.value);
+        currentCircle.setRadius(value * 1000); // Convert km to meters
+    }
+});
+</script>
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=places&callback=initMap">
+</script>
+{% endblock %}

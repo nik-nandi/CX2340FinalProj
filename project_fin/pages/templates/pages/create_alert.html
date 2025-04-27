@@ -1,0 +1,431 @@
+{% extends 'pages/base.html' %}
+
+{% block content %}
+<div class="create-alert-container">
+    <div class="create-alert-header">
+        <h2>Create New Trip Alert</h2>
+        <a href="{% url 'guide_alerts' %}" class="btn">← Back to Alerts</a>
+    </div>
+    
+    <div class="create-alert-content">
+        <div class="create-alert-form">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="trip_area">Trip Area:</label>
+                    <select id="trip_area" name="trip_area" required>
+                        <option value="">-- Select Trip Area --</option>
+                        {% for area in guided_areas %}
+                            <option value="{{ area.id }}" 
+                                data-lat="{{ area.latitude }}" 
+                                data-lng="{{ area.longitude }}" 
+                                data-radius="{{ area.radius }}"
+                                {% if request.GET.trip_area|stringformat:"s" == area.id|stringformat:"s" %}selected{% endif %}>
+                                {{ area.name }} ({{ area.user.username }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="title">Alert Title:</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="event_date">Event Date (optional):</label>
+                    <input type="datetime-local" id="event_date" name="event_date">
+                    <p class="field-help">Leave blank if this alert is not for a specific event</p>
+                </div>
+                <div class="form-group">
+                    <label>Location:</label>
+                    <input type="hidden" id="latitude" name="latitude" required>
+                    <input type="hidden" id="longitude" name="longitude" required>
+                </div>
+                <button type="submit" class="btn" id="submit-alert" disabled>Create Alert</button>
+            </form>
+        </div>
+        
+        <div class="create-alert-map">
+            <div id="map" style="height: 500px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let map;
+let alertMarker = null;
+let tripAreaCircle = null;
+let mapLoaded = false;
+let mapClickEnabled = false;
+
+function initMap() {
+    try {
+        // Default location (will be updated when trip area is selected)
+        const defaultLocation = { lat: 33.7490, lng: -84.3880 };
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 12,
+            center: defaultLocation
+        });
+        
+        mapLoaded = true;
+        console.log("Map loaded successfully");
+        
+        // Handle trip area selection change
+        const tripAreaSelect = document.getElementById('trip_area');
+        tripAreaSelect.addEventListener('change', function() {
+            const option = this.options[this.selectedIndex];
+            if (option.value) {
+                const lat = parseFloat(option.dataset.lat);
+                const lng = parseFloat(option.dataset.lng);
+                const radius = parseFloat(option.dataset.radius);
+                updateTripAreaCircle(lat, lng, radius);
+                
+                // Enable map click when trip area is selected
+                mapClickEnabled = true;
+                
+                // Show a message that user can click on map
+                const mapInstructions = document.createElement('div');
+                mapInstructions.className = 'map-instructions';
+                mapInstructions.innerHTML = '<strong>Click on the map</strong> to set the alert location';
+                
+                // Add the instructions to the map
+                map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
+                map.controls[google.maps.ControlPosition.TOP_CENTER].push(mapInstructions);
+                
+                // Auto-place marker at the center of the trip area to make form easier to complete
+                if (!alertMarker) {
+                    setAlertLocation(new google.maps.LatLng(lat, lng));
+                }
+            } else {
+                clearTripAreaCircle();
+                mapClickEnabled = false;
+            }
+        });
+        
+        // Handle map clicks with improved error handling
+        map.addListener("click", function(e) {
+            console.log("Map clicked at:", e.latLng.lat(), e.latLng.lng());
+            
+            // Check if map clicks are enabled
+            if (!mapClickEnabled) {
+                const tripAreaSelect = document.getElementById('trip_area');
+                if (!tripAreaSelect.value) {
+                    alert("Please select a trip area first");
+                    return;
+                }
+            }
+            
+            const position = e.latLng;
+            setAlertLocation(position);
+        });
+        
+        // Initialize map with selected trip area if available
+        if (tripAreaSelect.value) {
+            console.log("Trip area already selected:", tripAreaSelect.value);
+            const selectedOption = tripAreaSelect.options[tripAreaSelect.selectedIndex];
+            const lat = parseFloat(selectedOption.dataset.lat);
+            const lng = parseFloat(selectedOption.dataset.lng);
+            const radius = parseFloat(selectedOption.dataset.radius);
+            updateTripAreaCircle(lat, lng, radius);
+            
+            // Enable map clicks
+            mapClickEnabled = true;
+            
+            // Auto-place marker at the center of the trip area
+            setAlertLocation(new google.maps.LatLng(lat, lng));
+        }
+    } catch (error) {
+        console.error("Error initializing map:", error);
+        document.getElementById('map').innerHTML = 
+            '<div class="map-error">There was an error loading the map. Please check your internet connection and reload the page.</div>';
+    }
+}
+
+function updateTripAreaCircle(lat, lng, radius) {
+    // Clear existing circle if any
+    clearTripAreaCircle();
+    
+    // Create new circle for trip area
+    const center = new google.maps.LatLng(lat, lng);
+    tripAreaCircle = new google.maps.Circle({
+        strokeColor: "#4285F4",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#4285F4",
+        fillOpacity: 0.15,
+        map,
+        center: center,
+        radius: radius * 1000  // Convert km to meters
+    });
+    
+    // Center map on trip area
+    map.setCenter(center);
+    map.setZoom(13);
+}
+
+function clearTripAreaCircle() {
+    if (tripAreaCircle) {
+        tripAreaCircle.setMap(null);
+        tripAreaCircle = null;
+    }
+}
+
+function setAlertLocation(position) {
+    try {
+        console.log("Setting alert location to:", position.lat(), position.lng());
+        
+        // Check if a trip area is selected
+        const tripAreaSelect = document.getElementById('trip_area');
+        if (!tripAreaSelect.value) {
+            alert("Please select a trip area first");
+            return;
+        }
+        
+        // Add visual feedback that the click was registered
+        const clickFeedback = document.createElement('div');
+        clickFeedback.className = 'map-click-feedback';
+        clickFeedback.style.position = 'absolute';
+        clickFeedback.style.left = '50%';
+        clickFeedback.style.top = '50%';
+        clickFeedback.style.transform = 'translate(-50%, -50%)';
+        clickFeedback.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        clickFeedback.style.padding = '10px 15px';
+        clickFeedback.style.borderRadius = '4px';
+        clickFeedback.style.zIndex = '1000';
+        clickFeedback.textContent = 'Location selected!';
+        document.querySelector('.create-alert-map').appendChild(clickFeedback);
+        
+        setTimeout(() => {
+            try {
+                if (clickFeedback && clickFeedback.parentNode) {
+                    clickFeedback.parentNode.removeChild(clickFeedback);
+                }
+            } catch (e) {
+                console.error("Error removing feedback element:", e);
+            }
+        }, 1500);
+        
+        // Update or create marker
+        if (alertMarker) {
+            alertMarker.setPosition(position);
+        } else {
+            try {
+                alertMarker = new google.maps.Marker({
+                    position: position,
+                    map: map,
+                    animation: google.maps.Animation.DROP,
+                    draggable: true
+                });
+                
+                // Handle marker drag end
+                alertMarker.addListener('dragend', function() {
+                    updateLocationInputs(alertMarker.getPosition());
+                });
+            } catch (error) {
+                console.error("Error creating marker:", error);
+                alert("There was a problem placing the marker. Please try again.");
+                return;
+            }
+        }
+        
+        // Update form inputs
+        updateLocationInputs(position);
+    } catch (error) {
+        console.error("Error in setAlertLocation:", error);
+        alert("There was an error setting the location. Please try again.");
+    }
+}
+
+function updateLocationInputs(position) {
+    try {
+        document.getElementById('latitude').value = position.lat();
+        document.getElementById('longitude').value = position.lng();
+        document.getElementById('submit-alert').disabled = false;
+        
+        // Show success message to user
+        const locationStatus = document.createElement('div');
+        locationStatus.className = 'location-status success';
+        locationStatus.textContent = 'Location selected! You can now create the alert.';
+        
+        const existingStatus = document.querySelector('.location-status');
+        if (existingStatus) {
+            existingStatus.remove();
+        }
+        
+        document.querySelector('.form-group:nth-last-child(2)').appendChild(locationStatus);
+    } catch (error) {
+        console.error("Error updating location inputs:", error);
+    }
+}
+
+// Add a document-ready handler to ensure the map loads
+document.addEventListener('DOMContentLoaded', function() {
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    function checkGoogleMaps() {
+        attempts++;
+        if (isGoogleMapsLoaded()) {
+            console.log("Google Maps API loaded successfully");
+        } else {
+            console.error("Google Maps API not loaded (attempt " + attempts + ")");
+            
+            if (attempts < maxAttempts) {
+                setTimeout(checkGoogleMaps, 1000);  // Try again in 1 second
+            } else {
+                document.getElementById('map').innerHTML = 
+                    '<div class="map-error">' +
+                    '<p>Google Maps could not be loaded.</p>' +
+                    '<p>Please check your internet connection and reload the page.</p>' +
+                    '<button onclick="window.location.reload()">Reload Page</button>' +
+                    '</div>';
+            }
+        }
+    }
+    
+    setTimeout(checkGoogleMaps, 500);  // Give maps a moment to load
+});
+
+function isGoogleMapsLoaded() {
+    return typeof google !== 'undefined' && 
+           typeof google.maps !== 'undefined' && 
+           typeof google.maps.Map !== 'undefined';
+}
+</script>
+
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap&v=weekly">
+</script>
+
+<style>
+.create-alert-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.create-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.create-alert-content {
+    display: flex;
+    gap: 30px;
+}
+
+.create-alert-form {
+    flex: 1;
+}
+
+.create-alert-map {
+    flex: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="datetime-local"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1em;
+}
+
+.field-help {
+    margin-top: 5px;
+    font-size: 0.85em;
+    color: #666;
+}
+
+@media (max-width: 800px) {
+    .create-alert-content {
+        flex-direction: column-reverse;
+    }
+    
+    .create-alert-map {
+        margin-bottom: 20px;
+    }
+}
+
+.map-error {
+    padding: 20px;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    text-align: center;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.location-status {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.location-status.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#submit-alert:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+#submit-alert:not(:disabled) {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.map-instructions {
+    background-color: white;
+    padding: 10px;
+    margin: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-size: 14px;
+    text-align: center;
+}
+
+.map-click-feedback {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    animation: fadeIn 0.3s, fadeOut 0.5s 1s forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+</style>
+{% endblock %}

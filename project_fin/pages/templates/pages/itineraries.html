@@ -1,0 +1,882 @@
+{% extends 'pages/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="itinerary-container">
+    <div class="itinerary-header">
+        <h2>My Itinerary</h2>
+        <div class="trip-area-selector">
+            <label for="trip-area">Trip Area:</label>
+            <select id="trip-area" onchange="location.href='?trip_area=' + this.value">
+                {% for area in trip_areas %}
+                    <option value="{{ area.id }}" {% if selected_trip_area.id == area.id %}selected{% endif %}>
+                        {{ area.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            
+            <a href="{% url 'map_ui' %}" class="btn">Back to Trips</a>
+            <a href="{% url 'profile' %}" class="btn">Back to Profile</a>
+            <a id="get-directions" class="btn">Get Directions</a>
+            <a id="use-maps" class="btn">Use Maps</a>
+        </div>
+    </div>
+    
+    {% if selected_trip_area %}
+    <div class="itinerary-content">
+        <div class="itinerary-sidebar">
+            <div class="itinerary-section">
+                <h3>Your Itinerary</h3>
+                {% if itinerary_items %}
+                <ul id="itinerary-list" class="itinerary-items">
+                    {% for item in itinerary_items %}
+                    <li id="itinerary-item-{{ item.id }}" data-id="{{ item.id }}" class="itinerary-item">
+                        <div class="drag-handle">☰</div>
+                        <div class="item-content">
+                            <h4>{{ item.name }}</h4>
+                            <p>{{ item.address }}</p>
+                            <div class="item-actions">
+                                <button class="btn-small view-on-map" data-lat="{{ item.latitude }}" data-lng="{{ item.longitude }}">View on Map</button>
+                                <button class="btn-small remove-item" data-id="{{ item.id }}">Remove</button>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty-message">No attractions added to your itinerary yet. Search below to find attractions.</p>
+                {% endif %}
+            </div>
+            
+            <div class="search-section">
+                <h3>Find Attractions</h3>
+                <div class="attraction-filters">
+                    <button class="filter-btn active" data-type="tourist_attraction">Attractions</button>
+                    <button class="filter-btn" data-type="restaurant">Food</button>
+                    <button class="filter-btn" data-type="lodging">Lodging</button>
+                </div>
+                <div id="search-results" class="search-results">
+                    <p class="loading-message" style="display: none;">Loading attractions...</p>
+                    <div class="results-container"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="itinerary-map-container">
+            <div id="itinerary-map" style="height: 600px; width: 100%;"></div>
+            <div id="directions-panel" style="margin-top:10px; max-height:200px; overflow:auto;"></div>
+        </div>
+    </div>
+    {% else %}
+    <div class="no-trip-area">
+        <p>You haven't created any trip areas yet. Create one to start planning your itinerary.</p>
+        <a href="{% url 'map_ui' %}" class="btn">Create Trip Area</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Sortable.js library before your script -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+let map;
+let markers = [];
+let infoWindow;
+let selectedTripArea = {% if selected_trip_area %}{{ selected_trip_area.id }}{% else %}null{% endif %};
+let itineraryPlaceIds = {};
+let directionsService;
+let directionsRenderer;
+let sortableList;
+
+function initMap() {
+    if (!selectedTripArea) return;
+
+    // Initialize map
+    {% if selected_trip_area %}
+    const tripAreaCenter = { lat: {{ selected_trip_area.latitude }}, lng: {{ selected_trip_area.longitude }} };
+    const tripAreaRadius = {{ selected_trip_area.radius }} * 1000; // Convert km to meters
+    {% else %}
+    const tripAreaCenter = { lat: 33.7490, lng: -84.3880 }; // Default to Atlanta if no trip area
+    const tripAreaRadius = 10000; // Default 10km radius
+    {% endif %}
+    
+    map = new google.maps.Map(document.getElementById("itinerary-map"), {
+        zoom: 13,
+        center: tripAreaCenter
+    });
+    
+    infoWindow = new google.maps.InfoWindow();
+    
+    // Draw circle for trip area radius
+    const tripAreaCircle = new google.maps.Circle({
+        strokeColor: "#FF0000",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#FF0000",
+        fillOpacity: 0.1,
+        map: map,
+        center: tripAreaCenter,
+        radius: tripAreaRadius
+    });
+    
+    // Initialize the itineraryPlaceIds lookup
+    {% for item in itinerary_items %}
+        itineraryPlaceIds["{{ item.place_id }}"] = {{ item.id }};
+    {% endfor %}
+    
+    // Add existing itinerary items to map
+    {% for item in itinerary_items %}
+    addMarkerToMap({
+        position: {lat: {{ item.latitude }}, lng: {{ item.longitude }}},
+        title: "{{ item.name }}",
+        address: "{{ item.address }}",
+        id: {{ item.id }},
+        place_id: "{{ item.place_id }}",
+        isItineraryItem: true
+    });
+    {% endfor %}
+    
+    // Perform initial search for attractions
+    searchAttractions('tourist_attraction');
+    
+    // Set up event handlers for filters
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active state
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Perform search with selected filter
+            searchAttractions(this.dataset.type);
+        });
+    });
+    
+    // Set up event handlers for itinerary list items
+    setupItineraryItemHandlers();
+
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map,
+        panel: document.getElementById('directions-panel')
+    });
+
+    const dirBtn = document.getElementById('get-directions');
+    if (dirBtn) dirBtn.addEventListener('click', getDirections);
+
+    const useMapsBtn = document.getElementById('use-maps');
+    if (useMapsBtn) useMapsBtn.addEventListener('click', useMaps);
+
+    // Initialize Sortable for the itinerary list
+    initSortable();
+}
+
+// New function to initialize or reinitialize Sortable
+function initSortable() {
+    const itineraryList = document.getElementById('itinerary-list');
+    if (itineraryList) {
+        // Destroy existing sortable instance if it exists to prevent duplicates
+        if (sortableList) {
+            sortableList.destroy();
+        }
+        
+        sortableList = new Sortable(itineraryList, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function(evt) {
+                // Get the new order and send to the server
+                saveNewOrder();
+            }
+        });
+    }
+}
+
+function getDirections() {
+    // refresh current itinerary stops from the DOM
+    const items = document.querySelectorAll('#itinerary-list li');
+    if (items.length < 2) {
+        alert('Add at least two locations to get directions.');
+        return;
+    }
+    const stops = Array.from(items).map(li => {
+        const btn = li.querySelector('.view-on-map');
+        return { lat: parseFloat(btn.dataset.lat), lng: parseFloat(btn.dataset.lng) };
+    });
+    const origin = stops[0];
+    const destination = stops[stops.length - 1];
+    const waypoints = stops.slice(1, -1)
+        .map(loc => ({ location: new google.maps.LatLng(loc.lat, loc.lng), stopover: true }));
+
+    directionsService.route({
+        origin: origin,
+        destination: destination,
+        waypoints: waypoints,
+        travelMode: google.maps.TravelMode.DRIVING
+    }, (response, status) => {
+        if (status === 'OK') {
+            directionsRenderer.setDirections(response);
+        } else {
+            alert('Directions request failed: ' + status);
+        }
+    });
+}
+
+function useMaps() {
+    const items = document.querySelectorAll('#itinerary-list li');
+    if (items.length < 2) {
+        alert('Add at least two locations to use Google Maps.');
+        return;
+    }
+
+    const stops = Array.from(items).map(li => {
+        const btn = li.querySelector('.view-on-map');
+        return { lat: parseFloat(btn.dataset.lat), lng: parseFloat(btn.dataset.lng) };
+    });
+
+    const origin = `${stops[0].lat},${stops[0].lng}`;
+    const destination = `${stops[stops.length - 1].lat},${stops[stops.length - 1].lng}`;
+    
+    // Format waypoints as "lat,lng|lat,lng|..."
+    const waypoints = stops.slice(1, -1)
+        .map(loc => `${loc.lat},${loc.lng}`)
+        .join('|');
+
+    // Construct Google Maps URL
+    let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    
+    // Add waypoints if there are any
+    if (waypoints) {
+        mapsUrl += `&waypoints=${waypoints}`;
+    }
+    
+    // Add driving mode
+    mapsUrl += `&travelmode=driving`;
+
+    // Open Google Maps in a new tab
+    window.open(mapsUrl, '_blank');
+}
+
+function searchAttractions(type) {
+    if (!selectedTripArea) return;
+    
+    const resultsContainer = document.querySelector('#search-results .results-container');
+    const loadingMessage = document.querySelector('#search-results .loading-message');
+    
+    // Show loading message
+    resultsContainer.innerHTML = '';
+    loadingMessage.style.display = 'block';
+    
+    // Clear previous attraction markers (keep itinerary markers)
+    markers.forEach(marker => {
+        if (!marker.isItineraryItem) {
+            marker.setMap(null);
+        }
+    });
+    markers = markers.filter(marker => marker.isItineraryItem);
+    
+    // Make API request
+    fetch(`/api/attractions/search/?trip_area_id=${selectedTripArea}&type=${type}`)
+        .then(response => response.json())
+        .then(data => {
+            loadingMessage.style.display = 'none';
+            
+            if (data.error) {
+                resultsContainer.innerHTML = `<p class="error-message">Error: ${data.error}</p>`;
+                return;
+            }
+            
+            if (!data.results || data.results.length === 0) {
+                resultsContainer.innerHTML = `<p>No ${type.replace('_', ' ')}s found in this area.</p>`;
+                return;
+            }
+            
+            // Display results
+            let resultsHTML = '';
+            data.results.forEach(place => {
+                // Check if this place is already in the itinerary
+                const isInItinerary = itineraryPlaceIds.hasOwnProperty(place.place_id);
+                const cardClass = isInItinerary ? 'search-result already-selected' : 'search-result';
+                
+                resultsHTML += `
+                <div class="${cardClass}" data-place-id="${place.place_id}">
+                    <h4>${place.name}</h4>
+                    <p>${place.vicinity || ''}</p>
+                    <div class="search-result-actions">
+                        <button class="btn-small view-attraction" 
+                            data-lat="${place.geometry.location.lat}" 
+                            data-lng="${place.geometry.location.lng}">
+                            View on Map
+                        </button>
+                        ${isInItinerary ? 
+                        `<span class="already-in-itinerary">Already in itinerary</span>` :
+                        `<button class="btn-small add-to-itinerary" 
+                            data-place='${JSON.stringify(place).replace(/'/g, "&#39;")}'>
+                            Add to Itinerary
+                        </button>`}
+                    </div>
+                </div>
+                `;
+                
+                // Only add marker to map if not already in itinerary (prevents duplicate markers)
+                if (!isInItinerary) {
+                    addMarkerToMap({
+                        position: {
+                            lat: place.geometry.location.lat,
+                            lng: place.geometry.location.lng
+                        },
+                        title: place.name,
+                        address: place.vicinity || '',
+                        place_id: place.place_id,
+                        isItineraryItem: false,
+                        place: place
+                    });
+                }
+            });
+            
+            resultsContainer.innerHTML = resultsHTML;
+            
+            // Set up event handlers for results
+            setupSearchResultHandlers();
+        })
+        .catch(error => {
+            loadingMessage.style.display = 'none';
+            resultsContainer.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
+        });
+}
+
+function addMarkerToMap(options) {
+    // Define blue icon with HTTPS URL for security
+    const blueIcon = {
+        url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        scaledSize: new google.maps.Size(32, 32)
+    };
+    
+    const redIcon = {
+        url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        scaledSize: new google.maps.Size(32, 32)
+    };
+
+    const marker = new google.maps.Marker({
+        position: options.position,
+        map: map,
+        title: options.title,
+        animation: options.isItineraryItem ? google.maps.Animation.DROP : null,
+        icon: options.isItineraryItem ? blueIcon : redIcon
+    });
+    
+    marker.isItineraryItem = options.isItineraryItem;
+    if (options.id) marker.id = options.id;
+    if (options.place_id) marker.place_id = options.place_id;
+    
+    marker.addListener("click", () => {
+        const content = `
+            <div class="info-window">
+                <h4>${options.title}</h4>
+                <p>${options.address}</p>
+                ${!options.isItineraryItem && options.place && !itineraryPlaceIds[options.place_id] ? 
+                `<button id="add-from-map-${options.place_id}" class="btn-small">Add to Itinerary</button>` : 
+                options.isItineraryItem ? 
+                `<button id="remove-from-map-${options.id}" class="btn-small">Remove from Itinerary</button>` :
+                `<span class="already-in-itinerary">Already in itinerary</span>`}
+            </div>
+        `;
+        
+        infoWindow.setContent(content);
+        infoWindow.open(map, marker);
+        
+        // Add event listener after info window is opened
+        setTimeout(() => {
+            if (!options.isItineraryItem && options.place && !itineraryPlaceIds[options.place_id]) {
+                const addBtn = document.getElementById(`add-from-map-${options.place_id}`);
+                if (addBtn) {
+                    addBtn.addEventListener('click', () => {
+                        addToItinerary(options.place);
+                    });
+                }
+            } else if (options.isItineraryItem) {
+                const removeBtn = document.getElementById(`remove-from-map-${options.id}`);
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', () => {
+                        removeFromItinerary(options.id);
+                    });
+                }
+            }
+        }, 100);
+    });
+    
+    markers.push(marker);
+    return marker;
+}
+
+function setupSearchResultHandlers() {
+    // View on map buttons
+    document.querySelectorAll('.search-result .view-attraction').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            
+            map.setCenter({lat, lng});
+            map.setZoom(16);
+            
+            // Find and activate the corresponding marker
+            const marker = markers.find(m => 
+                m.getPosition().lat() === lat && 
+                m.getPosition().lng() === lng
+            );
+            
+            if (marker) {
+                google.maps.event.trigger(marker, 'click');
+            }
+        });
+    });
+    
+    // Add to itinerary buttons
+    document.querySelectorAll('.search-result .add-to-itinerary').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const place = JSON.parse(this.dataset.place);
+            addToItinerary(place);
+        });
+    });
+}
+
+function setupItineraryItemHandlers() {
+    // View on map buttons
+    document.querySelectorAll('.itinerary-item .view-on-map').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            
+            map.setCenter({lat, lng});
+            map.setZoom(16);
+            
+            // Find and activate the corresponding marker
+            const marker = markers.find(m => 
+                m.id === parseInt(this.closest('.itinerary-item').dataset.id)
+            );
+            
+            if (marker) {
+                google.maps.event.trigger(marker, 'click');
+            }
+        });
+    });
+    
+    // Remove buttons - use event delegation instead of direct binding
+    document.querySelectorAll('.itinerary-item .remove-item').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const itemId = this.dataset.id;
+            removeFromItinerary(itemId, this.closest('.itinerary-item'));
+        });
+    });
+}
+
+function addToItinerary(place) {
+    fetch('/api/itinerary/add/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            trip_area_id: selectedTripArea,
+            place: place
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+            return;
+        }
+        
+        if (data.status === 'already_exists') {
+            alert('This attraction is already in your itinerary.');
+            return;
+        }
+        
+        // Add to our lookup of itinerary items
+        itineraryPlaceIds[place.place_id] = data.item_id;
+        
+        // Add new item to UI
+        const itineraryList = document.getElementById('itinerary-list');
+        const emptyMessage = document.querySelector('.empty-message');
+        
+        if (emptyMessage) emptyMessage.remove();
+        
+        if (!itineraryList) {
+            // Create the list if it doesn't exist
+            const itinerarySection = document.querySelector('.itinerary-section');
+            const newList = document.createElement('ul');
+            newList.id = 'itinerary-list';
+            newList.className = 'itinerary-items';
+            itinerarySection.appendChild(newList);
+        }
+        
+        // Create new itinerary item element
+        const newItem = document.createElement('li');
+        newItem.id = `itinerary-item-${data.item_id}`;
+        newItem.dataset.id = data.item_id;
+        newItem.className = 'itinerary-item';
+        
+        newItem.innerHTML = `
+            <div class="drag-handle">☰</div>
+            <div class="item-content">
+                <h4>${place.name}</h4>
+                <p>${place.vicinity || ''}</p>
+                <div class="item-actions">
+                    <button class="btn-small view-on-map" data-lat="${place.geometry.location.lat}" data-lng="${place.geometry.location.lng}">View on Map</button>
+                    <button class="btn-small remove-item" data-id="${data.item_id}">Remove</button>
+                </div>
+            </div>
+        `;
+        
+        // Add to DOM with initial opacity 0
+        newItem.style.opacity = "0";
+        document.getElementById('itinerary-list').appendChild(newItem);
+        
+        // Update the search result UI to show as already selected
+        const searchResult = document.querySelector(`.search-result[data-place-id="${place.place_id}"]`);
+        if (searchResult) {
+            searchResult.classList.add('already-selected');
+            const actionsDiv = searchResult.querySelector('.search-result-actions');
+            const addButton = actionsDiv.querySelector('.add-to-itinerary');
+            if (addButton) {
+                // Replace add button with "Already in itinerary" text
+                addButton.remove();
+                const alreadyInText = document.createElement('span');
+                alreadyInText.className = 'already-in-itinerary';
+                alreadyInText.textContent = 'Already in itinerary';
+                actionsDiv.appendChild(alreadyInText);
+            }
+        }
+        
+        // Find and remove the red marker
+        const existingMarker = markers.find(m => m.place_id === place.place_id && !m.isItineraryItem);
+        if (existingMarker) {
+            existingMarker.setMap(null);
+            markers = markers.filter(m => m !== existingMarker);
+        }
+        
+        // Add marker for the new itinerary item
+        const blueIcon = {
+            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            scaledSize: new google.maps.Size(32, 32)
+        };
+        
+        const marker = new google.maps.Marker({
+            position: {
+                lat: place.geometry.location.lat,
+                lng: place.geometry.location.lng
+            },
+            map: map,
+            title: place.name,
+            animation: google.maps.Animation.DROP,
+            icon: blueIcon
+        });
+        
+        marker.isItineraryItem = true;
+        marker.id = data.item_id;
+        marker.place_id = place.place_id;
+        
+        marker.addListener("click", () => {
+            const content = `
+                <div class="info-window">
+                    <h4>${place.name}</h4>
+                    <p>${place.vicinity || ''}</p>
+                    <button id="remove-from-map-${data.item_id}" class="btn-small">Remove from Itinerary</button>
+                </div>
+            `;
+            
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+            
+            // Add event listener after info window is opened
+            setTimeout(() => {
+                const removeBtn = document.getElementById(`remove-from-map-${data.item_id}`);
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', () => {
+                        removeFromItinerary(data.item_id);
+                    });
+                }
+            }, 100);
+        });
+        
+        markers.push(marker);
+        
+        // Set up event handlers for the new item
+        setupItemHandlers(newItem);
+        
+        // Fade in the new item
+        setTimeout(() => {
+            newItem.style.transition = "opacity 0.5s ease, background-color 1s";
+            newItem.style.opacity = "1";
+            newItem.style.backgroundColor = '#e6f7ff';
+            
+            // Reset background color after highlight
+            setTimeout(() => {
+                newItem.style.backgroundColor = '';
+            }, 1000);
+            
+            // Reinitialize sortable to include the new item
+            initSortable();
+        }, 10);
+    })
+    .catch(error => {
+        alert('Error adding to itinerary: ' + error.message);
+    });
+}
+
+function removeFromItinerary(itemId, itemElement) {
+    // First get the place_id from our markers before removing
+    const marker = markers.find(m => m.id === parseInt(itemId));
+    const place_id = marker ? marker.place_id : null;
+    
+    // Apply a fade-out effect before removal
+    if (itemElement) {
+        itemElement.style.transition = "opacity 0.3s ease";
+        itemElement.style.opacity = "0";
+    } else {
+        // If no element was passed (clicked from map), find and fade it
+        const el = document.getElementById(`itinerary-item-${itemId}`);
+        if (el) {
+            el.style.transition = "opacity 0.3s ease";
+            el.style.opacity = "0";
+            itemElement = el;
+        }
+    }
+    
+    fetch(`/api/itinerary/remove/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+            // Restore opacity if error occurs
+            if (itemElement) {
+                itemElement.style.opacity = "1";
+            }
+            return;
+        }
+        
+        // Remove from our lookup
+        if (place_id) {
+            delete itineraryPlaceIds[place_id];
+            
+            // Update any search result to show it's not selected anymore
+            const searchResult = document.querySelector(`.search-result[data-place-id="${place_id}"]`);
+            if (searchResult) {
+                searchResult.classList.remove('already-selected');
+                const actionsDiv = searchResult.querySelector('.search-result-actions');
+                const alreadyInText = actionsDiv.querySelector('.already-in-itinerary');
+                if (alreadyInText) {
+                    // Replace "Already in itinerary" text with add button
+                    alreadyInText.remove();
+                    
+                    // Find the place data from one of our markers
+                    const placeMarker = markers.find(m => m.place_id === place_id && !m.isItineraryItem);
+                    if (placeMarker && placeMarker.place) {
+                        const addButton = document.createElement('button');
+                        addButton.className = 'btn-small add-to-itinerary';
+                        addButton.dataset.place = JSON.stringify(placeMarker.place).replace(/'/g, "&#39;");
+                        addButton.textContent = 'Add to Itinerary';
+                        addButton.addEventListener('click', function() {
+                            addToItinerary(placeMarker.place);
+                        });
+                        actionsDiv.appendChild(addButton);
+                    }
+                    
+                    // If there's no existing red marker, create one
+                    const redMarkerExists = markers.some(m => m.place_id === place_id && !m.isItineraryItem);
+                    if (!redMarkerExists) {
+                        // We need to restore the red marker
+                        const searchData = searchResult.querySelector('.view-attraction');
+                        if (searchData) {
+                            const lat = parseFloat(searchData.dataset.lat);
+                            const lng = parseFloat(searchData.dataset.lng);
+                            
+                            // Get place info from the existing blue marker before removing it
+                            let title = '';
+                            let address = '';
+                            let place = null;
+                            
+                            if (marker) {
+                                title = marker.getTitle();
+                                place = marker.place;
+                            }
+                            
+                            // Add red marker back to the map
+                            addMarkerToMap({
+                                position: {lat, lng},
+                                title: title,
+                                address: address || '',
+                                place_id: place_id,
+                                isItineraryItem: false,
+                                place: place
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Remove the item from the UI after animation completes
+        setTimeout(() => {
+            const itemElement = document.getElementById(`itinerary-item-${itemId}`);
+            if (itemElement) itemElement.remove();
+            
+            // Remove the blue marker from the map
+            const marker = markers.find(m => m.id === parseInt(itemId));
+            if (marker) {
+                marker.setMap(null);
+                markers = markers.filter(m => m !== marker);
+            }
+            
+            // Check if itinerary is now empty
+            const itineraryList = document.getElementById('itinerary-list');
+            if (itineraryList && itineraryList.children.length === 0) {
+                itineraryList.remove();
+                
+                const itinerarySection = document.querySelector('.itinerary-section');
+                const emptyMessage = document.createElement('p');
+                emptyMessage.className = 'empty-message';
+                emptyMessage.textContent = 'No attractions added to your itinerary yet. Search below to find attractions.';
+                itinerarySection.appendChild(emptyMessage);
+            }
+        }, 300); // Match this with the transition duration
+    })
+    .catch(error => {
+        console.error('Error removing from itinerary:', error);
+        // Restore opacity if error occurs
+        if (itemElement) {
+            itemElement.style.opacity = "1";
+        }
+    });
+}
+
+function saveNewOrder() {
+    const itemElements = document.querySelectorAll('#itinerary-list li');
+    const itemOrder = Array.from(itemElements).map(item => item.dataset.id);
+    
+    if (itemOrder.length < 2) return; // No need to reorder if there's only one item
+    
+    // Send the new order to the server
+    fetch('/api/itinerary/reorder/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            item_order: itemOrder
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+        } else if (data.status === 'success') {
+            // Visual feedback for successful reordering
+            const itineraryList = document.getElementById('itinerary-list');
+            itineraryList.classList.add('reorder-success');
+            setTimeout(() => {
+                itineraryList.classList.remove('reorder-success');
+            }, 500);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving new order:', error);
+    });
+}
+
+function getCsrfToken() {
+    return document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+}
+
+// New helper function to set up event handlers for a single item
+function setupItemHandlers(itemElement) {
+    const viewButton = itemElement.querySelector('.view-on-map');
+    if (viewButton) {
+        viewButton.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            
+            map.setCenter({lat, lng});
+            map.setZoom(16);
+            
+            // Find and activate the corresponding marker
+            const marker = markers.find(m => 
+                m.id === parseInt(this.closest('.itinerary-item').dataset.id)
+            );
+            
+            if (marker) {
+                google.maps.event.trigger(marker, 'click');
+            }
+        });
+    }
+    
+    const removeButton = itemElement.querySelector('.remove-item');
+    if (removeButton) {
+        removeButton.addEventListener('click', function() {
+            const itemId = this.dataset.id;
+            removeFromItinerary(itemId, this.closest('.itinerary-item'));
+        });
+    }
+}
+
+// Add hidden CSRF token for AJAX requests
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = 'csrfmiddlewaretoken';
+    csrfToken.value = '{{ csrf_token }}';
+    document.body.appendChild(csrfToken);
+    
+    // Add some CSS for the drag handle and reordering
+    const style = document.createElement('style');
+    style.textContent = `
+        .itinerary-item {
+            display: flex;
+            align-items: center;
+        }
+        .drag-handle {
+            cursor: grab;
+            padding: 0 10px;
+            font-size: 20px;
+            color: #555;
+            transition: color 0.2s;
+        }
+        .drag-handle:hover {
+            color: #000;
+            cursor: grab;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+        }
+        .sortable-chosen {
+            background-color: #f0f8ff;
+        }
+        .reorder-success {
+            animation: highlight 0.5s ease;
+        }
+        @keyframes highlight {
+            0% { background-color: transparent; }
+            50% { background-color: #e6f7ff; }
+            100% { background-color: transparent; }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&libraries=places&callback=initMap">
+</script>
+{% endblock %}
