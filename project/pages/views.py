@@ -2,11 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 
 from project.settings import GOOGLE_API_KEY
-from .models import User, TripArea, TripLocation, ItineraryItem
+from .models import User, TripArea, TripLocation, ItineraryItem, LocalEvent
 from django.contrib.auth.forms import AuthenticationForm
 from django import forms
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 import requests
 import json
 from django.conf import settings
@@ -36,7 +36,9 @@ def signup_view(request):
             if form.cleaned_data['role'] == 'admin':
                 user.is_staff = True
                 user.is_superuser = True
-            
+            elif form.cleaned_data['role'] == 'Travel Guide':
+                user.is_staff = True
+                user.is_superuser = False
             user.save()
             login(request, user)  # Automatically log them in
             return redirect('landing')
@@ -294,3 +296,27 @@ def reorder_itinerary(request):
             return handle_error(e)
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+class LocalEventForm(forms.ModelForm):
+    class Meta:
+        model = LocalEvent
+        fields = ['name', 'description', 'location', 'date']
+
+@login_required
+def local_events_list(request):
+    events = LocalEvent.objects.order_by('date')
+    return render(request, 'pages/local_events_list.html', {'events': events})
+
+@login_required
+def create_local_event(request):
+    if not request.user.is_guide():  # Only staff users = Travel Guides
+        return HttpResponseForbidden("You are not allowed to create events.")
+
+    if request.method == 'POST':
+        form = LocalEventForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('local_events_list')
+    else:
+        form = LocalEventForm()
+    return render(request, 'pages/create_local_event.html', {'form': form})

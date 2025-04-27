@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1>Nearby Events</h1>
+
+<ul>
+  {% for event in events %}
+    <li>
+      <h2>{{ event.name }}</h2>
+      <p>{{ event.description }}</p>
+      <p><strong>Location:</strong> {{ event.location }}</p>
+      <p><strong>Date:</strong> {{ event.date }}</p>
+    </li>
+  {% endfor %}
+</ul>
+    
+{% if user.is_guide %}
+    <a href="{% url 'create_local_event' %}">Create New Event</a>
+{% endif %}
+</body>
+</html>

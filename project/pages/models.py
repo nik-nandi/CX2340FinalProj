@@ -60,3 +60,13 @@ class ItineraryItem(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.trip_area.name}"
+
+class LocalEvent(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    location = models.CharField(max_length=255)
+    date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

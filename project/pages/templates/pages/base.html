@@ -18,10 +18,12 @@
                         <a href="{% url 'profile' %}">My Profile</a>
                         <a href="{% url 'map_ui' %}">My Map</a>
                         <a href="{% url 'itineraries' %}">My Itineraries</a>
+                        <a href="{% url 'local_events_list' %}">Local Events</a>
                     {% else %}
                         <a href="{% url 'profile' %}">My Profile</a>
                         <a href="{% url 'map_ui' %}">My Map</a>
                         <a href="{% url 'itineraries' %}">My Itineraries</a>
+                        <a href="{% url 'local_events_list' %}">Local Events</a>
                     {% endif %}
                 </div>
             </div>
